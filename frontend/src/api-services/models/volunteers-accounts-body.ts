@@ -57,4 +57,23 @@ export interface VolunteersAccountsBody {
      * @memberof VolunteersAccountsBody
      */
     phone?: string;
+
+    /**
+     * 性别（不传默认 UNKNOWN）
+     *
+     * @type {string}
+     * @memberof VolunteersAccountsBody
+     */
+    gender?: VolunteersAccountsBodyGenderEnum;
 }
+
+/**
+ * @export
+ * @enum {string}
+ */
+export enum VolunteersAccountsBodyGenderEnum {
+    MALE = 'MALE',
+    FEMALE = 'FEMALE',
+    UNKNOWN = 'UNKNOWN'
+}
+

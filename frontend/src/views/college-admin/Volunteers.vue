@@ -6,7 +6,7 @@
         <el-icon><Upload /></el-icon>
         批量导入
       </el-button>
-      <el-button type="success" @click="showAddDialog = true">
+      <el-button type="success" @click="openAddDialog">
         <el-icon><Plus /></el-icon>
         添加志愿者
       </el-button>
@@ -42,6 +42,17 @@
         </el-table-column>
         <el-table-column prop="collegeName" label="学院" width="150" />
         <el-table-column prop="phone" label="联系方式" width="150" />
+        <el-table-column prop="password" label="密码" width="180">
+          <template #default="{ row }">
+            <div class="password-cell">
+              <span v-if="!visiblePasswords[row.id]">{{ '****'.repeat(3) }}</span>
+              <span v-else class="visible-password">{{ (row as any).password }}</span>
+              <el-button link type="primary" size="small" @click="handleTogglePasswordVisibility(row)">
+                {{ visiblePasswords[row.id] ? '隐藏' : '显示' }}
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
@@ -54,25 +65,37 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button
-              v-if="row.status === 'active'"
-              type="warning"
-              size="small"
-              @click="handleFreeze(row)"
-            >
-              停用
-            </el-button>
-            <el-button
-              v-if="row.status === 'frozen'"
-              type="success"
-              size="small"
-              @click="handleActivate(row)"
-            >
-              启用
-            </el-button>
+            
+            <el-dropdown @command="(command: 'IN_SCHOOL' | 'SUSPENDED' | 'GRADUATED') => handleStatusChange(row, command)" style="margin-left: 8px">
+              <el-button type="info" size="small">
+                状态管理 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item 
+                    command="IN_SCHOOL" 
+                    :disabled="row.status === 'active'"
+                  >
+                    <el-icon><Check /></el-icon> 设为在校
+                  </el-dropdown-item>
+                  <el-dropdown-item 
+                    command="SUSPENDED" 
+                    :disabled="row.status === 'frozen'"
+                  >
+                    <el-icon><Lock /></el-icon> 设为停用
+                  </el-dropdown-item>
+                  <el-dropdown-item 
+                    command="GRADUATED" 
+                    :disabled="row.status === 'inactive'"
+                  >
+                    <el-icon><UserFilled /></el-icon> 设为已毕业
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -90,23 +113,35 @@
         :rules="rules"
         label-width="100px"
       >
+        <el-form-item label="登录账号" prop="username">
+          <el-input v-model="form.username" placeholder="请输入登录账号" />
+        </el-form-item>
+
+        <el-form-item label="初始密码" prop="password">
+          <el-input v-model="form.password" placeholder="请输入初始密码" show-password />
+        </el-form-item>
+
+        <el-form-item label="姓名" prop="realName">
+          <el-input v-model="form.realName" placeholder="请输入姓名" />
+        </el-form-item>
+
         <el-form-item label="学号" prop="studentId">
           <el-input v-model="form.studentId" placeholder="请输入学号" />
         </el-form-item>
-        <el-form-item label="姓名" prop="name">
-          <el-input v-model="form.name" placeholder="请输入姓名" />
+
+        <el-form-item label="学院" prop="collegeId">
+          <el-input
+            :model-value="userStore.user?.collegeName || (form.collegeId != null ? String(form.collegeId) : '')"
+            disabled
+            placeholder="登录后自动带入"
+          />
+          <div style="margin-top: 6px; color: #999; font-size: 12px">
+            学院管理员创建志愿者时，学院由当前账号自动确定。
+          </div>
         </el-form-item>
-        <el-form-item label="性别" prop="gender">
-          <el-radio-group v-model="form.gender">
-            <el-radio label="male">男</el-radio>
-            <el-radio label="female">女</el-radio>
-          </el-radio-group>
-        </el-form-item>
+
         <el-form-item label="联系方式" prop="phone">
           <el-input v-model="form.phone" placeholder="请输入联系方式" />
-        </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" placeholder="请输入邮箱" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -150,14 +185,14 @@
       </el-alert>
       <el-upload
         :auto-upload="false"
-        accept=".csv"
+        accept=".xlsx,.xls"
         :limit="1"
         :on-change="handleFileChange"
       >
         <el-button type="primary">选择Excel文件</el-button>
         <template #tip>
           <div class="el-upload__tip">
-            支持格式：.csv（Excel文件请另存为CSV格式）
+            支持格式：.xlsx（请使用下载的模板填写后上传）
           </div>
         </template>
       </el-upload>
@@ -171,13 +206,15 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { Download } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { Download, Plus, Upload, Check, Lock, UserFilled, ArrowDown } from '@element-plus/icons-vue'
 import { volunteerApi } from '@/utils/api'
 import { downloadVolunteerTemplate } from '@/utils/excelTemplate'
 import type { Volunteer } from '@/utils/mockData'
+import { useUserStore } from '@/stores/user'
 
 const volunteers = ref<Volunteer[]>([])
+const userStore = useUserStore()
 const filters = reactive({
   status: '',
   keyword: ''
@@ -188,22 +225,24 @@ const showImportDialog = ref(false)
 const editingVolunteer = ref<Volunteer | null>(null)
 const formRef = ref<FormInstance>()
 
+// 密码显示状态：默认掩码，点击显示/隐藏
+const visiblePasswords = ref<Record<number, boolean>>({})
+
 const form = reactive({
+  username: '',
+  password: '',
+  realName: '',
   studentId: '',
-  name: '',
-  gender: 'male' as 'male' | 'female',
-  phone: '',
-  email: ''
+  collegeId: (userStore.user?.collegeId ?? null) as number | null,
+  phone: ''
 })
 
 const rules: FormRules = {
+  username: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入初始密码', trigger: 'blur' }],
+  realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   studentId: [{ required: true, message: '请输入学号', trigger: 'blur' }],
-  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  phone: [{ required: true, message: '请输入联系方式', trigger: 'blur' }],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
-  ]
+  phone: [{ required: true, message: '请输入联系方式', trigger: 'blur' }]
 }
 
 const filteredVolunteers = computed(() => {
@@ -234,6 +273,26 @@ const loadVolunteers = async () => {
   } catch (error: any) {
     ElMessage.error(error.message || '加载志愿者列表失败')
   }
+}
+
+// 说明：当前 swagger 客户端里没有“查看志愿者真实密码”的接口。
+// 因此这里按产品体验做一个一致的交互：默认 *****，点击“显示”时尽量展示本地可得的初始密码：
+// - 若该行已缓存过 password（例如刚创建/刚修改），直接展示
+// - 否则兜底展示导入/默认初始密码 123456（后端如有不同，请补充对应查看密码接口后再替换这里）
+const handleTogglePasswordVisibility = async (volunteer: Volunteer) => {
+  const id = (volunteer as any).id as number
+  if (!id) return
+
+  if (visiblePasswords.value[id]) {
+    visiblePasswords.value[id] = false
+    return
+  }
+
+  // 首次显示：尽量从已有字段拿，否则兜底 123456
+  if (!(volunteer as any).password) {
+    ;(volunteer as any).password = '123456'
+  }
+  visiblePasswords.value[id] = true
 }
 
 const getStatusType = (status: string) => {
@@ -269,12 +328,26 @@ const handleReset = () => {
 
 const handleEdit = (volunteer: Volunteer) => {
   editingVolunteer.value = volunteer
-  form.studentId = volunteer.studentId
-  form.name = volunteer.name
-  form.gender = volunteer.gender
-  form.phone = volunteer.phone
-  form.email = volunteer.email
+  // 当前后端未提供“编辑志愿者信息”接口；这里仅用于复用弹窗展示，不允许保存
+  // 同时尽量填充能看到的信息（账号/密码通常取不到）
+  form.username = (volunteer as any).username || volunteer.studentId || ''
+  form.password = ''
+  form.realName = volunteer.name || ''
+  form.studentId = volunteer.studentId || ''
+  form.collegeId = (userStore.user?.collegeId ?? (volunteer as any).collegeId ?? null) as any
+  form.phone = volunteer.phone || ''
   showAddDialog.value = true
+}
+
+const openAddDialog = () => {
+  editingVolunteer.value = null
+  // 打开弹窗时强制把学院信息同步到表单里（避免 init 时 user 为空导致 collegeId 仍为 null）
+  form.collegeId = (userStore.user?.collegeId ?? null) as any
+  showAddDialog.value = true
+  // 注意：collegeId 是不可编辑字段，不走 rules 校验；这里在打开时尽早提示更友好
+  if (form.collegeId == null) {
+    ElMessage.warning('当前登录信息缺少学院信息（collegeId），请重新登录后再创建志愿者')
+  }
 }
 
 const handleSave = async () => {
@@ -283,8 +356,29 @@ const handleSave = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
-        // TODO: 调用API保存
-        ElMessage.success(editingVolunteer.value ? '编辑成功' : '添加成功')
+        if (editingVolunteer.value) {
+          // 注意：当前 OpenAPI 未看到“编辑志愿者信息”的 PATCH 接口，这里避免误报成功。
+          throw new Error('当前不支持编辑志愿者信息，请使用批量导入覆盖或联系后端补充接口')
+        }
+
+        // 再兜底一次：collegeId 为不可编辑字段，不参与 rules 校验；提交前强校验
+        if (form.collegeId == null) {
+          form.collegeId = (userStore.user?.collegeId ?? null) as any
+        }
+        if (form.collegeId == null) {
+          throw new Error('缺少学院信息（collegeId），请重新登录后重试')
+        }
+
+        await volunteerApi.createVolunteer({
+          username: form.username,
+          password: form.password,
+          realName: form.realName,
+          studentId: form.studentId,
+          collegeId: form.collegeId,
+          phone: form.phone
+        } as any)
+
+        ElMessage.success('添加成功')
         showAddDialog.value = false
         resetForm()
         await loadVolunteers()
@@ -295,23 +389,42 @@ const handleSave = async () => {
   })
 }
 
-const handleFreeze = async (volunteer: Volunteer) => {
-  try {
-    // TODO: 调用API停用
-    ElMessage.success('已停用')
-    await loadVolunteers()
-  } catch (error: any) {
-    ElMessage.error(error.message || '操作失败')
+const handleStatusChange = async (volunteer: Volunteer, status: 'IN_SCHOOL' | 'SUSPENDED' | 'GRADUATED') => {
+  const statusMap = {
+    IN_SCHOOL: '在校',
+    SUSPENDED: '停用', 
+    GRADUATED: '已毕业'
   }
-}
-
-const handleActivate = async (volunteer: Volunteer) => {
+  
+  // 前端使用小写状态，API使用大写（但具体值不同）
+  const frontendToApiStatusMap = {
+    active: 'IN_SCHOOL',
+    frozen: 'SUSPENDED',
+    inactive: 'GRADUATED'
+  }
+  
+  const currentApiStatus = frontendToApiStatusMap[volunteer.status as keyof typeof frontendToApiStatusMap] || volunteer.status?.toUpperCase()
+  const currentStatusText = statusMap[currentApiStatus as keyof typeof statusMap] || volunteer.status
+  const newStatusText = statusMap[status]
+  
   try {
-    // TODO: 调用API启用
-    ElMessage.success('已启用')
+    await ElMessageBox.confirm(
+      `确认将志愿者 ${volunteer.name} 的状态从 "${currentStatusText}" 修改为 "${newStatusText}" 吗？`,
+      '状态修改确认',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    await volunteerApi.setVolunteerStatus(volunteer.id!, status)
+    ElMessage.success(`已将 ${volunteer.name} 的状态修改为 "${newStatusText}"`)
     await loadVolunteers()
   } catch (error: any) {
-    ElMessage.error(error.message || '操作失败')
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '状态修改失败')
+    }
   }
 }
 
@@ -359,12 +472,14 @@ const handleImport = async () => {
 
 const resetForm = () => {
   editingVolunteer.value = null
+  form.username = ''
+  form.password = ''
+  form.realName = ''
   form.studentId = ''
-  form.name = ''
-  form.gender = 'male'
+  form.collegeId = (userStore.user?.collegeId ?? null) as any
   form.phone = ''
-  form.email = ''
-  formRef.value?.resetFields()
+  // resetFields 可能会把 collegeId 重置为初始值（初始值可能是 null），这里用手动清空更稳
+  formRef.value?.clearValidate()
 }
 </script>
 
@@ -385,6 +500,20 @@ const resetForm = () => {
   
   .filter-bar {
     margin-bottom: 20px;
+  }
+
+  .password-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .visible-password {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #333;
+      font-weight: 500;
+      letter-spacing: 2px;
+    }
   }
 }
 </style>

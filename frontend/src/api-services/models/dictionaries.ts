@@ -30,6 +30,22 @@ export interface Dictionaries {
     userRole: Array<DictionaryItem>;
 
     /**
+     * 学科字典（用于内容标签/筛选）
+     *
+     * @type {Array<DictionaryItem>}
+     * @memberof Dictionaries
+     */
+    subjects: Array<DictionaryItem>;
+
+    /**
+     * 年级范围字典（用于内容标签/筛选）
+     *
+     * @type {Array<DictionaryItem>}
+     * @memberof Dictionaries
+     */
+    gradeRanges: Array<DictionaryItem>;
+
+    /**
      * @type {Array<DictionaryItem>}
      * @memberof Dictionaries
      */

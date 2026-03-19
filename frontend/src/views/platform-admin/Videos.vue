@@ -100,88 +100,16 @@
     </el-dialog>
     
     <!-- 视频预览对话框 -->
-    <el-dialog
-      v-model="previewDialogVisible"
-      title="视频详情"
-      width="1200px"
-    >
-      <div v-if="currentPreviewVideo" class="video-detail">
-        <el-row :gutter="20">
-          <!-- 左侧：视频播放器 -->
-          <el-col :span="12">
-            <div style="background: #000; border-radius: 8px; position: sticky; top: 20px; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; overflow: hidden">
-              <video
-                v-if="currentPreviewVideo.videoUrl"
-                :src="currentPreviewVideo.videoUrl"
-                controls
-                style="width: 100%; height: 100%; object-fit: contain"
-              >
-                您的浏览器不支持视频播放
-              </video>
-              <div v-else style="color: #fff; padding: 60px; text-align: center">
-                <el-icon style="font-size: 64px; margin-bottom: 20px"><VideoPlay /></el-icon>
-                <p style="font-size: 16px">视频文件待上传</p>
-              </div>
-            </div>
-          </el-col>
-          
-          <!-- 右侧：详情信息 -->
-          <el-col :span="12">
-            <el-descriptions :column="1" border :label-style="{ width: '100px', padding: '12px 0' }" :content-style="{ padding: '12px 0' }">
-              <el-descriptions-item label="标题">
-                {{ currentPreviewVideo.title }}
-              </el-descriptions-item>
-              <el-descriptions-item label="简介">
-                {{ currentPreviewVideo.description }}
-              </el-descriptions-item>
-              <el-descriptions-item label="志愿者">
-                {{ currentPreviewVideo.volunteerName }}
-              </el-descriptions-item>
-              <el-descriptions-item label="所属学院">
-                {{ currentPreviewVideo.collegeName }}
-              </el-descriptions-item>
-              <el-descriptions-item label="学科">
-                {{ currentPreviewVideo.subject }}
-              </el-descriptions-item>
-              <el-descriptions-item label="适用年级">
-                <el-tag v-for="g in currentPreviewVideo.grade" :key="g" size="small" style="margin-right: 5px">
-                  {{ g }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="播放量">
-                {{ currentPreviewVideo.playCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="点赞数">
-                {{ currentPreviewVideo.likeCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="收藏数">
-                {{ currentPreviewVideo.collectCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="状态">
-                <el-tag :type="getStatusType(currentPreviewVideo.status)">
-                  {{ getStatusText(currentPreviewVideo.status) }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="创建时间">
-                {{ formatDate(currentPreviewVideo.createdAt) }}
-              </el-descriptions-item>
-            </el-descriptions>
-          </el-col>
-        </el-row>
-      </div>
-      <template #footer>
-        <el-button @click="previewDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <VideoPreviewDialog v-model="previewDialogVisible" :video="currentPreviewVideo" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { VideoPlay } from '@element-plus/icons-vue'
 import { videoApi, collegeApi } from '@/utils/api'
 import type { Video, College } from '@/utils/mockData'
+import VideoPreviewDialog from '@/components/VideoPreviewDialog.vue'
 
 const videos = ref<Video[]>([])
 const colleges = ref<College[]>([])

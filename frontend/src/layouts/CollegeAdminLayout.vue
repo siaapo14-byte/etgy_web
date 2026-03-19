@@ -39,10 +39,6 @@
             <el-icon><User /></el-icon>
             <span>志愿者管理</span>
           </el-menu-item>
-          <el-menu-item index="/college-admin/children">
-            <el-icon><UserFilled /></el-icon>
-            <span>儿童账号管理</span>
-          </el-menu-item>
           <el-menu-item index="/college-admin/videos/manage">
             <el-icon><VideoPlay /></el-icon>
             <span>视频状态管理</span>

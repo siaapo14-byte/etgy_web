@@ -12,6 +12,7 @@ import { LiveApiFp } from '@/api-services/apis/live-api'
 import { UsersApiFp } from '@/api-services/apis/users-api'
 import { PlatformApiFp } from '@/api-services/apis/platform-api'
 import { OSSApiFp } from '@/api-services/apis/ossapi'
+import { ChildrenApiFp } from '@/api-services/apis/children-api'
 
 import type {
   Video as ApiVideo,
@@ -22,7 +23,12 @@ import type {
 
 const adaptVideo = (v: ApiVideo): Video => {
   // mockData 的字段命名与后端不同，这里尽量对齐旧 UI
-  const gradeArr = v.gradeRange ? v.gradeRange.split(',').map(i => i.trim()).filter(Boolean) : []
+  const gradeArr = v.gradeRange
+    ? v.gradeRange
+        .split(',')
+        .map((i: string) => i.trim())
+        .filter(Boolean)
+    : []
   const createdAt = v.createdAt ? new Date(v.createdAt as any).toISOString() : new Date().toISOString()
   const reviewedAt = v.reviewedAt ? new Date(v.reviewedAt as any).toISOString() : undefined
 
@@ -185,13 +191,36 @@ export const videoApi = {
     throw new Error('上传接口请改用 videoApi.uploadToOss(file) 获取上传结果，再调用 api-services 的 VideosApi')
   },
 
-  // 统一的 OSS 上传封装：优先使用预签名直传（presign），可选使用后端代传
-  uploadToOss: async (file: File, options?: { prefix?: string; useServer?: boolean }): Promise<{ objectUrl: string; key?: string }> => {
-    if (options?.useServer) {
-      const data = await ossApiWrapper.uploadViaServer(file, options?.prefix || 'videos')
-      return { objectUrl: data.objectUrl || data.location || '', key: data.key || data.filename }
+  // 统一的 OSS 上传封装：仅使用后端代传（按当前部署策略不再启用 presign 直传）
+  uploadToOss: async (
+    file: File,
+    options?: { prefix?: string; useServer?: boolean; onProgress?: (percent: number) => void }
+  ): Promise<{ objectUrl: string; key?: string }> => {
+    const normalizeObjectUrl = (raw: any): string => {
+      const s = String(raw || '').trim()
+      if (!s) return ''
+      // 关键：后端代传/OSS 返回的 url 可能是带签名参数的临时访问链接（非常长）
+      // 业务入库只需要对象的稳定地址（不含 ? 后的 querystring），否则会触发数据库字段长度限制
+      const idx = s.indexOf('?')
+      return idx >= 0 ? s.slice(0, idx) : s
     }
-    return await ossApiWrapper.uploadViaPresign(file, options?.prefix || 'videos/')
+
+    // 不论 options.useServer 传什么，都统一走后端代传，避免 /api/oss/upload-url 与第三方 OSS CORS 问题
+    const data = await ossApiWrapper.uploadViaServer(file, options?.prefix || 'videos', options?.onProgress)
+    const objectUrl = normalizeObjectUrl(
+      data?.objectUrl ||
+        data?.url ||
+        data?.fileUrl ||
+        data?.location ||
+        data?.publicUrl ||
+        ''
+    )
+    const key = data?.key || data?.filename || data?.name
+    if (!objectUrl) {
+      // 把后端返回带出来，方便定位 400/500 的真实原因
+      throw new Error(`后端代传上传成功但未返回可用的 objectUrl/url（返回：${JSON.stringify(data)}）`)
+    }
+    return { objectUrl, key }
   },
   
   // 提交审核
@@ -259,7 +288,11 @@ export const liveApi = {
 // OSS 统一上传工具（封装 presign / 后端代传 两种方案）
 export const ossApiWrapper = {
   // 使用后端返回的 uploadUrl（预签名）直传，并返回 objectUrl/key
-  uploadViaPresign: async (file: File, prefix = ''): Promise<{ objectUrl: string; key?: string }> => {
+  uploadViaPresign: async (
+    file: File,
+    prefix = '',
+    onProgress?: (percent: number) => void
+  ): Promise<{ objectUrl: string; key?: string }> => {
     const req = await OSSApiFp(apiConfig).apiOssUploadUrlPost({
       filename: file.name,
       contentType: file.type || 'application/octet-stream',
@@ -270,10 +303,48 @@ export const ossApiWrapper = {
     const uploadUrl = data.uploadUrl || data.url
     if (!uploadUrl) throw new Error('获取上传 URL 失败')
 
-    const putResp = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type || 'application/octet-stream' },
-      body: file
+    // 预签名 PUT 对请求头非常敏感：如果后端签名时没有把 Content-Type 纳入签名，
+    // 但前端 PUT 时携带了 Content-Type，就会出现 SignatureDoesNotMatch。
+    // 因此默认不主动设置 headers；若后端返回了明确要求的 headers，则按返回值设置。
+    const extraHeaders: Record<string, string> = {}
+    if (data.headers && typeof data.headers === 'object') {
+      for (const [k, v] of Object.entries(data.headers)) {
+        if (v != null) extraHeaders[String(k)] = String(v)
+      }
+    }
+
+    // 用 XHR 才能拿到上传进度；fetch 目前无法可靠获得 upload progress
+    const putResp = await new Promise<Response>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('PUT', uploadUrl)
+      // 直传 OSS 一般不需要携带 cookie；显式关闭可避免部分环境下的跨域限制问题
+      xhr.withCredentials = false
+      for (const [k, v] of Object.entries(extraHeaders)) {
+        xhr.setRequestHeader(k, v)
+      }
+      if (onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (!e.lengthComputable) return
+          const p = Math.max(0, Math.min(100, Math.round((e.loaded / e.total) * 100)))
+          onProgress(p)
+        }
+      }
+      xhr.onload = () => {
+        // 预签名 PUT 成功一般是 200/204
+        const ok = xhr.status >= 200 && xhr.status < 300
+        if (!ok) {
+          const text = (xhr.responseText || '').slice(0, 1000)
+          reject(new Error(`上传文件到 OSS 失败（HTTP ${xhr.status}）${text ? `：${text}` : ''}`))
+          return
+        }
+        resolve(new Response(null, { status: xhr.status }))
+      }
+      xhr.onerror = () => {
+        const text = (xhr.responseText || '').slice(0, 1000)
+        reject(new Error(`上传文件到 OSS 失败（网络错误）${text ? `：${text}` : ''}`))
+      }
+      xhr.onabort = () => reject(new Error('上传已取消'))
+      xhr.send(file)
     })
     if (!putResp.ok) throw new Error('上传文件到 OSS 失败')
 
@@ -281,11 +352,20 @@ export const ossApiWrapper = {
     return { objectUrl, key: data.key || data.filename }
   },
 
-  // 使用后端代传接口（multipart）上传，后端返回的结构以接口为准
-  uploadViaServer: async (file: File, folder = ''): Promise<any> => {
+  // 旧实现：使用后端代传接口（multipart）上传，后端返回的结构以接口为准
+  // 保留为内部实现，避免改动风险。
+  _uploadViaServerImpl: async (file: File, folder = ''): Promise<any> => {
     const req = await OSSApiFp(apiConfig).apiOssUploadFolderPostForm(folder || 'uploads', file as any)
     const res = await req()
     return res.data.data
+  },
+
+  // 对外：后端代传上传（当前项目接口无法稳定拿到 progress，所以这里先做“尽力而为”）
+  // 若未来后端提供可走 XHR 的 multipart endpoint，我们再把这里升级成真实 onprogress。
+  uploadViaServer: async (file: File, folder: string, onProgress?: (percent: number) => void): Promise<any> => {
+    const res = await (ossApiWrapper as any)._uploadViaServerImpl(file, folder)
+    if (onProgress) onProgress(100)
+    return res
   }
 }
 
@@ -295,40 +375,83 @@ export const ossApiWrapper = {
 export const volunteerApi = {
   // 获取志愿者列表
   getVolunteers: async (params?: any): Promise<Volunteer[]> => {
+    const mapVolunteerStatus = (raw: any): 'active' | 'inactive' | 'frozen' => {
+      const v = String(raw || '').toUpperCase()
+      // user.status（ACTIVE/FROZEN/INACTIVE）
+      if (v === 'ACTIVE') return 'active'
+      if (v === 'FROZEN' || v === 'SUSPENDED') return 'frozen'
+      // volunteer profile.status（IN_SCHOOL/GRADUATED 等）
+      if (v === 'IN_SCHOOL') return 'active'
+      if (v === 'GRADUATED') return 'inactive'
+      return 'inactive'
+    }
+
+    const mapGender = (raw: any): 'male' | 'female' | any => {
+      if (raw == null) return 'male'
+      const v = String(raw).toUpperCase()
+      if (v === 'F' || v === 'FEMALE' || v === '女') return 'female'
+      if (v === 'M' || v === 'MALE' || v === '男') return 'male'
+      return ''
+    }
+
     const req = await UsersApiFp(apiConfig).apiUsersVolunteersGet(
       params?.collegeId,
+      params?.status,
+      params?.userStatus,
       params?.search,
       params?.page,
       params?.pageSize
     )
     const res = await req()
-    const list = res.data.data || []
-    return list.map((u: any) => ({
-      id: u.id,
-      studentId: u.studentId || u.username || '',
-      name: u.name || '',
-      gender: u.gender === 'F' ? 'female' : 'male',
-      collegeId: u.collegeId,
-      collegeName: u.college?.name || '',
-      phone: u.phone || '',
-      email: u.email || '',
-      status: u.status === 'ACTIVE' ? 'active' : u.status === 'FROZEN' ? 'frozen' : 'inactive',
-      createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString()
-    }))
+
+    // 兼容后端不同返回结构：
+    // - res.data.data 为数组（常见）
+    // - res.data 为数组
+    // - res.data.data 为分页对象 { items: [] } / { list: [] }
+    const payload: any = res?.data?.data ?? res?.data
+    const list: any[] = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.items)
+        ? payload.items
+        : Array.isArray(payload?.list)
+          ? payload.list
+          : []
+
+    return list.map((v: any) => {
+      // swagger 示例是“志愿者档案(profile)”结构：
+      // { userId, realName, studentId, collegeId, phone, status(IN_SCHOOL), user{...}, college{...} }
+      const user = v.user || {}
+      const college = v.college || v.collegeInfo || {}
+      const createdAtRaw = user.createdAt || v.createdAt
+
+      return {
+        id: user.id ?? v.userId ?? v.id,
+        username: user.username || v.username || '',
+        studentId: v.studentId || user.username || '',
+        name: v.realName || v.name || user.realName || user.name || '',
+        gender: mapGender(v.gender ?? user.gender),
+        collegeId: v.collegeId ?? college.id,
+        collegeName: college.name || v.collegeName || '',
+        phone: v.phone || user.phone || '',
+        email: v.email || user.email || '',
+        status: mapVolunteerStatus(user.status ?? v.status),
+        createdAt: createdAtRaw ? new Date(createdAtRaw).toISOString() : new Date().toISOString()
+      } as any
+    })
   },
   
   // 创建志愿者
   createVolunteer: async (data: Partial<Volunteer>): Promise<Volunteer> => {
-    // API surface provides apiUsersVolunteersAccountsPost for creating volunteer accounts.
-    // Try to create via accounts endpoint (may accept single account); fallback to single creation if necessary.
+    // 确保所有必填字段都有有效值，不传递 collegeId（学院管理员自动使用自身学院）
     const payload = {
-      username: data.studentId || data.studentId || '',
+      username: (data as any).username || data.studentId || '',
       password: (data as any).password || '123456',
-      realName: data.name || '',
+      realName: (data as any).realName || data.name || '',
       studentId: data.studentId || '',
-      collegeId: data.collegeId,
-      phone: data.phone
-    } as any
+      phone: data.phone || ''
+    }
+
+    console.log('🔥 NEW - 创建志愿者 payload (已移除 collegeId):', JSON.stringify(payload, null, 2))
 
     try {
       const req = await UsersApiFp(apiConfig).apiUsersVolunteersAccountsPost(payload)
@@ -346,11 +469,54 @@ export const volunteerApi = {
         status: u.status === 'ACTIVE' ? 'active' : u.status === 'FROZEN' ? 'frozen' : 'inactive',
         createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString()
       }
-    } catch (e) {
+    } catch (e: any) {
+      console.error('❌ 创建志愿者失败:', e)
+      if (e.response) {
+        console.error('❌ 错误详情:', {
+          status: e.response.status,
+          statusText: e.response.statusText,
+          data: e.response.data
+        })
+      }
       // 若 accountsPost 不可用/失败，尝试单个创建（若存在对应接口）
       // TODO: 若单个创建接口存在，可在这里回退实现。
       throw e
     }
+  }
+
+  ,
+
+  // 启用/停用（状态变更）
+  setVolunteerStatus: async (id: number, status: 'IN_SCHOOL' | 'SUSPENDED' | 'GRADUATED'): Promise<void> => {
+    const payload = { status }
+    console.log(`🔄 修改志愿者状态 - ID: ${id}, 新状态:`, payload)
+    
+    try {
+      const req = await UsersApiFp(apiConfig).apiUsersVolunteersIdStatusPatch(String(id), payload as any)
+      await req()
+      console.log(`✅ 志愿者 ${id} 状态修改成功`)
+    } catch (error: any) {
+      console.error(`❌ 志愿者 ${id} 状态修改失败:`, error)
+      if (error.response) {
+        console.error('❌ 错误详情:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        })
+      }
+      throw error
+    }
+  },
+
+  // 批量导入志愿者（逐条创建）
+  importVolunteers: async (list: Array<Partial<Volunteer>>): Promise<Volunteer[]> => {
+    const created: Volunteer[] = []
+    for (const row of list) {
+      // 尽量复用 createVolunteer 的字段映射
+      const v = await volunteerApi.createVolunteer(row)
+      created.push(v)
+    }
+    return created
   }
 }
 
@@ -398,18 +564,56 @@ export const childApi = {
       list = []
     }
 
-    return list.map((c: any) => ({
-      id: c.id,
-      username: c.username,
-      name: c.name || '',
-      gender: c.gender === 'F' ? 'female' : 'male',
-      grade: c.grade || '',
-      school: c.school || '',
-      collegeId: c.collegeId,
-      collegeName: c.college?.name || '',
-      status: c.status === 'ACTIVE' ? 'active' : 'inactive',
-      createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()
-    }))
+    const mapGender = (raw: any): 'male' | 'female' | any => {
+      if (raw == null) return 'male'
+      const v = String(raw).toUpperCase()
+      if (v === 'F' || v === 'FEMALE' || v === '女') return 'female'
+      if (v === 'M' || v === 'MALE' || v === '男') return 'male'
+      // 兜底：平台端页面会显示“未知”
+      return ''
+    }
+
+    const mapStatus = (raw: any): 'active' | 'inactive' => {
+      const v = String(raw || '').toUpperCase()
+      return v === 'ACTIVE' ? 'active' : 'inactive'
+    }
+
+    return list.map((c: any) => {
+      const profile = c.childProfile || c.profile || {}
+      const createdAt = c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()
+
+      return {
+        id: c.id,
+        username: c.username,
+        // 平台端 children 接口：真实业务字段在 childProfile
+        name: profile.realName || c.realName || c.name || '',
+        gender: mapGender(profile.gender ?? c.gender),
+        grade: profile.grade || c.grade || '',
+        school: profile.school || c.school || '',
+        // 儿童无学院：这里保留字段但为空，页面已不展示学院
+        collegeId: c.collegeId ?? null,
+        collegeName: c.college?.name || '',
+        status: mapStatus(c.status),
+        createdAt
+      }
+    })
+  },
+
+  // 更新儿童账号（当前页面只编辑姓名/性别/年级/学校）
+  updateChild: async (
+    _id: number,
+    _patch: { realName?: string; gender?: 'male' | 'female'; grade?: string; school?: string }
+  ): Promise<void> => {
+    // OpenAPI 目前未暴露 children PATCH /{id}，因此用“批量创建/单个创建”不可行。
+    // 若后端未来提供 children patch，请替换这里。
+    // 这里先兜底：不支持更新时抛出可读错误，避免页面静默成功。
+    throw new Error('后端暂未提供儿童账号编辑接口（仅支持批量导入/状态变更）')
+  },
+
+  // 启用/停用儿童账号
+  setChildStatus: async (id: number, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'): Promise<void> => {
+    const req = await UsersApiFp(apiConfig).apiUsersChildrenIdStatusPatch(String(id), { status } as any)
+    await req()
   },
   
   // 批量导入儿童账号
@@ -429,13 +633,22 @@ export const childApi = {
   // 下载儿童导入模板（后端提供的Excel模板）
   downloadChildrenTemplate: async (): Promise<void> => {
     try {
-      const req = await UsersApiFp(apiConfig).apiUsersChildrenBatchExcelTemplateGet()
+      // 关键：必须显式指定 responseType，否则 axios 可能按 JSON/text 解码，导致 xlsx 内容损坏
+      const req = await UsersApiFp(apiConfig).apiUsersChildrenBatchExcelTemplateGet({ responseType: 'arraybuffer' } as any)
       const res = await req()
-      const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+
+      // 尽量从响应头中拿文件名（若后端设置了 Content-Disposition）
+      const cd: string | undefined = (res.headers as any)?.['content-disposition']
+      const match = cd ? cd.match(/filename\*?=(?:UTF-8''|\")?([^;\"\n]+)/i) : null
+      const filename = match ? decodeURIComponent(match[1].replace(/^"|"$/g, '')) : '儿童账号导入模板.xlsx'
+
+      const blob = new Blob([res.data as any], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = '儿童账号导入模板.xlsx'
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -443,6 +656,38 @@ export const childApi = {
     } catch (e) {
       throw e
     }
+  }
+
+  ,
+
+  // 查看儿童账号真实密码（平台管理员）
+  getChildPassword: async (id: number): Promise<string> => {
+    const req = await ChildrenApiFp(apiConfig).apiChildrenIdPasswordGet(String(id))
+    const res = await req()
+    const payload: any = res?.data?.data ?? res?.data
+    // 兼容不同返回结构：{ password } 或直接 string
+    return (payload?.password ?? payload?.data?.password ?? payload) as string
+  },
+
+  // 修改儿童账号密码（平台管理员）
+  setChildPassword: async (id: number, password: string): Promise<void> => {
+    const req = await ChildrenApiFp(apiConfig).apiChildrenIdPasswordPost(String(id), { password } as any)
+    await req()
+  }
+}
+
+// 平台管理员的“查看/修改学院管理员密码”API
+export const platformPasswordApi = {
+  getCollegeAdminPassword: async (id: number): Promise<string> => {
+    const req = await PlatformApiFp(apiConfig).apiPlatformCollegeAdminsIdPasswordGet(String(id))
+    const res = await req()
+    const payload: any = res?.data?.data ?? res?.data
+    return (payload?.password ?? payload?.data?.password ?? payload) as string
+  },
+
+  setCollegeAdminPassword: async (id: number, password: string): Promise<void> => {
+    const req = await PlatformApiFp(apiConfig).apiPlatformCollegeAdminsIdPasswordPost(String(id), { password } as any)
+    await req()
   }
 }
 
@@ -559,6 +804,10 @@ export const auditApi = {
     )
     const res = await req()
     const list = res.data.data || []
+    if (!Array.isArray(list)) {
+      console.warn('getAuditLogs: 后端返回的数据不是数组:', list)
+      return []
+    }
     return list.map((a: any) => ({
       id: a.id,
       userId: a.operatorId ?? 0,

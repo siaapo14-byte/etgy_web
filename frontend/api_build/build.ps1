@@ -7,7 +7,14 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # 设置默认参数
 $moduleName = "apiServices"
 $apiServicesPath = Join-Path (Join-Path $scriptDir "..") "src\api-services\"
-$apiUrl = "http://192.168.1.4:3000/api/docs.json"
+$apiUrl = "http://8.148.215.20/api/docs.json"
+
+# 可通过环境变量覆盖默认 swagger 地址（CI/不同后端环境更方便）
+# PowerShell 用法示例：
+#   $env:SWAGGER_URL='http://127.0.0.1:3000/api/docs.json'; .\build.ps1
+if ($env:SWAGGER_URL -and $env:SWAGGER_URL.Trim().Length -gt 0) {
+    $apiUrl = $env:SWAGGER_URL.Trim()
+}
 
 # 就业服务中心模块参数
 # $moduleName = "apiJyServices"

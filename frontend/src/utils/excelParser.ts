@@ -46,7 +46,7 @@ export function parseCSV(file: File): Promise<string[][]> {
 
 /**
  * 解析Excel文件
- * 当前仅支持CSV格式（.xlsx和.xls需要转换为CSV）
+ * 支持 xlsx/xls/csv
  */
 export async function parseExcel(file: File): Promise<string[][]> {
   const fileName = file.name.toLowerCase()
@@ -54,10 +54,11 @@ export async function parseExcel(file: File): Promise<string[][]> {
   if (fileName.endsWith('.csv')) {
     return parseCSV(file)
   } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-    // 提示用户转换为CSV
-    throw new Error('当前仅支持CSV格式，请将Excel文件另存为CSV格式后重试。\n操作方法：在Excel中选择"文件" -> "另存为" -> 文件类型选择"CSV UTF-8(逗号分隔)(*.csv)"')
+    // 当前导入链路改为：前端直接上传 xlsx 给后端，由后端做校验与解析。
+    // 因此不再在浏览器侧解析 xlsx（避免引入额外依赖与不同解析差异）。
+    throw new Error('当前不再支持前端解析 xlsx，请直接上传到后端导入接口')
   } else {
-    throw new Error('不支持的文件格式，请上传CSV文件')
+    throw new Error('不支持的文件格式，请上传 .xlsx 文件')
   }
 }
 

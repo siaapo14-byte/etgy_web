@@ -265,7 +265,8 @@ import { videoApi, liveApi, childApi, volunteerApi, collegeApi } from '@/utils/a
 import type { Video, Live, Child, Volunteer, College } from '@/utils/mockData'
 import type { EChartsOption } from 'echarts'
 
-const router = useRouter()
+// 通过模板中的 $router 完成跳转，这里无需单独实例
+useRouter()
 
 const videos = ref<Video[]>([])
 const lives = ref<Live[]>([])
@@ -380,7 +381,6 @@ const collegeBarOption = computed<EChartsOption>(() => {
 
 // 通过率饼图
 const approvalPieOption = computed<EChartsOption>(() => {
-  const total = videos.value.length
   const approved = videos.value.filter(v => v.status === 'approved' || v.status === 'published').length
   const rejected = videos.value.filter(v => v.status === 'rejected').length
   const reviewing = videos.value.filter(v => v.status === 'reviewing').length
@@ -604,7 +604,8 @@ const confirmOffline = async () => {
   if (!currentOfflineVideo.value) return
   
   try {
-    // TODO: 调用API下架
+    // 接口不一定接收 reason，这里先用于操作留痕提示
+    await videoApi.togglePublish(currentOfflineVideo.value.id!, 'offline')
     ElMessage.success('已下架')
     offlineDialogVisible.value = false
     await loadData()
@@ -618,7 +619,18 @@ const handleQuickBan = async (live: Live) => {
     await ElMessageBox.confirm('确定要封停这个直播吗？', '警告', {
       type: 'warning'
     })
-    // TODO: 调用API封停
+
+    // 优先走封停接口；若后端未提供 ban，则回退为下架
+    const anyLiveApi: any = liveApi as any
+    if (typeof anyLiveApi.banLive === 'function') {
+      await anyLiveApi.banLive(live.id!)
+    } else if (typeof anyLiveApi.offlineLive === 'function') {
+      await anyLiveApi.offlineLive(live.id!)
+    } else {
+      // 最后兜底：尝试调用 togglePublish（如果 liveApi 里有）
+      throw new Error('当前未找到可用的直播封停/下架接口封装')
+    }
+
     ElMessage.success('已封停')
     await loadData()
   } catch (error: any) {

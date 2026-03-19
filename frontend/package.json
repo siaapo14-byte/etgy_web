@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "typecheck": "tsc -b --pretty false --clean && tsc -b tsconfig.api-services.json --pretty false && tsc -b --pretty false",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },

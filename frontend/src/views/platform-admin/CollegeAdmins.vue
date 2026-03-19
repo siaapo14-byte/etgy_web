@@ -17,6 +17,17 @@
         <el-table-column prop="name" label="姓名" width="120" />
         <el-table-column prop="username" label="账号" width="150" />
         <el-table-column prop="collegeName" label="所属学院" width="150" />
+        <el-table-column prop="password" label="密码" width="180">
+          <template #default="{ row }">
+            <div class="password-cell">
+              <span v-if="!visiblePasswords[row.id]">{{ '****'.repeat(3) }}</span>
+              <span v-else class="visible-password">{{ (row as any).password }}</span>
+              <el-button link type="primary" size="small" @click="handleTogglePasswordVisibility(row)">
+                {{ visiblePasswords[row.id] ? '隐藏' : '显示' }}
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'active' ? 'success' : 'danger'">
@@ -32,6 +43,7 @@
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button type="primary" size="small" @click="handleEditPassword(row)">修改密码</el-button>
             <el-button
               v-if="row.status === 'active'"
               type="warning"
@@ -125,20 +137,56 @@
       </el-alert>
       <el-upload
         :auto-upload="false"
-        accept=".csv"
+        accept=".xlsx,.xls"
         :limit="1"
         :on-change="handleFileChange"
       >
         <el-button type="primary">选择Excel文件</el-button>
         <template #tip>
           <div class="el-upload__tip">
-            支持格式：.csv（Excel文件请另存为CSV格式）
+            支持格式：.xlsx（请使用下载的模板填写后上传）
           </div>
         </template>
       </el-upload>
       <template #footer>
         <el-button @click="showImportDialog = false">取消</el-button>
         <el-button type="primary" @click="handleImport">导入</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 修改密码对话框 -->
+    <el-dialog
+      v-model="passwordDialogVisible"
+      title="修改学院管理员密码"
+      width="500px"
+    >
+      <div v-if="editingPasswordAdmin" style="margin-bottom: 20px; padding: 12px; background: #f5f7fa; border-radius: 6px">
+        <p><strong>账号：</strong> {{ editingPasswordAdmin.username }}</p>
+        <p><strong>姓名：</strong> {{ editingPasswordAdmin.name }}</p>
+        <p><strong>学院：</strong> {{ editingPasswordAdmin.collegeName }}</p>
+      </div>
+      <el-form :model="passwordForm" label-width="100px">
+        <el-form-item label="新密码">
+          <el-input
+            v-model="passwordForm.newPassword"
+            type="password"
+            placeholder="请输入新密码（至少6位）"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="确认密码">
+          <el-input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            placeholder="请再次输入新密码"
+            show-password
+            @keyup.enter="confirmPasswordChange"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="passwordSaving" @click="confirmPasswordChange">确认修改</el-button>
       </template>
     </el-dialog>
   </div>
@@ -148,7 +196,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
-import { collegeApi } from '@/utils/api'
+import { collegeApi, platformPasswordApi } from '@/utils/api'
 import { downloadCollegeAdminTemplate } from '@/utils/excelTemplate'
 import type { College } from '@/utils/mockData'
 import { PlatformApiFp } from '@/api-services/apis/platform-api'
@@ -165,12 +213,23 @@ interface Admin {
 }
 
 const admins = ref<Admin[]>([])
+const visiblePasswords = ref<Record<number, boolean>>({})
+const passwordLoading = ref<Record<number, boolean>>({})
+
+const passwordDialogVisible = ref(false)
+const editingPasswordAdmin = ref<Admin | null>(null)
+const passwordSaving = ref(false)
+const passwordForm = reactive({
+  newPassword: '',
+  confirmPassword: ''
+})
 
 const colleges = ref<College[]>([])
 const showAddDialog = ref(false)
 const showImportDialog = ref(false)
 const editingAdmin = ref<Admin | null>(null)
 const formRef = ref<FormInstance>()
+const importFile = ref<File | null>(null)
 
 const form = reactive({
   name: '',
@@ -192,13 +251,15 @@ onMounted(async () => {
 })
 
 const adaptAdmin = (a: any, collegesMap: Map<number, string>): Admin => {
-  const collegeId = Number(a.collegeId ?? a.college?.id ?? 0)
-  const collegeName = a.college?.name || collegesMap.get(collegeId) || ''
+  // 后端返回结构：学院管理员用户字段在根上，真实姓名/学院信息通常在 adminProfile 里
+  const profile = a.adminProfile ?? a.profile ?? null
+  const collegeId = Number(profile?.collegeId ?? a.collegeId ?? a.college?.id ?? 0)
+  const collegeName = profile?.college?.name || a.college?.name || collegesMap.get(collegeId) || ''
   const statusRaw = String(a.status ?? '').toUpperCase()
   const status: Admin['status'] = statusRaw === 'ACTIVE' ? 'active' : 'inactive'
   return {
     id: Number(a.id),
-    name: a.realName ?? a.name ?? '',
+    name: profile?.realName ?? a.realName ?? a.name ?? '',
     username: a.username ?? '',
     collegeId,
     collegeName,
@@ -294,21 +355,80 @@ const handleEnable = async (admin: Admin) => {
   }
 }
 
+const handleEditPassword = (admin: Admin) => {
+  editingPasswordAdmin.value = admin
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  passwordDialogVisible.value = true
+}
+
+const confirmPasswordChange = async () => {
+  if (!editingPasswordAdmin.value) return
+
+  if (!passwordForm.newPassword || !passwordForm.confirmPassword) {
+    ElMessage.warning('请输入新密码和确认密码')
+    return
+  }
+
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    ElMessage.warning('两次输入的密码不一致')
+    return
+  }
+
+  if (passwordForm.newPassword.length < 6) {
+    ElMessage.warning('密码长度不能少于6位')
+    return
+  }
+
+  try {
+    passwordSaving.value = true
+    await platformPasswordApi.setCollegeAdminPassword(editingPasswordAdmin.value.id, passwordForm.newPassword)
+    ElMessage.success('密码修改成功')
+
+    // 更新本地展示：若当前是“显示状态”，直接更新为新密码；否则仍保持掩码
+    ;(editingPasswordAdmin.value as any).password = passwordForm.newPassword
+
+    passwordDialogVisible.value = false
+  } catch (e: any) {
+    ElMessage.error(e?.message || '密码修改失败')
+  } finally {
+    passwordSaving.value = false
+  }
+}
+
+// 密码处理：默认 *****；点击显示时请求真实密码；再次点击隐藏
+const handleTogglePasswordVisibility = async (admin: Admin) => {
+  const id = admin.id
+  if (visiblePasswords.value[id]) {
+    visiblePasswords.value[id] = false
+    return
+  }
+  try {
+    passwordLoading.value[id] = true
+    const pwd = await platformPasswordApi.getCollegeAdminPassword(id)
+    ;(admin as any).password = pwd || ''
+    visiblePasswords.value[id] = true
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取密码失败')
+  } finally {
+    passwordLoading.value[id] = false
+  }
+}
+
 const downloadTemplate = () => {
   downloadCollegeAdminTemplate()
   ElMessage.success('模板下载成功，请填写后上传')
 }
 
 const handleImport = async () => {
-  const fileInput = document.querySelector('.el-upload__input') as HTMLInputElement
-  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+  if (!importFile.value) {
     ElMessage.warning('请选择Excel文件')
     return
   }
   
   try {
     const { parseExcel, validateCollegeAdminData } = await import('@/utils/excelParser')
-    const rows = await parseExcel(fileInput.files[0])
+  const rows = await parseExcel(importFile.value)
     const validation = validateCollegeAdminData(rows)
 
     if (!validation.valid) {
@@ -321,6 +441,7 @@ const handleImport = async () => {
       const resp = await collegeApi.importAdmins(validation.data)
       ElMessage.success(`已提交导入请求，已创建 ${Array.isArray(resp) ? resp.length : 0} 条管理员`)
       showImportDialog.value = false
+      importFile.value = null
       // 刷新或提示后端结果
       // await loadAdmins()
     } catch (err: any) {
@@ -329,6 +450,10 @@ const handleImport = async () => {
   } catch (error: any) {
     ElMessage.error(error.message || '导入失败')
   }
+}
+
+const handleFileChange = (file: any) => {
+  importFile.value = file?.raw || null
 }
 
 const resetForm = () => {
@@ -353,6 +478,20 @@ const resetForm = () => {
     h2 {
       margin: 0;
       font-size: 24px;
+    }
+  }
+
+  .password-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .visible-password {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #333;
+      font-weight: 500;
+      letter-spacing: 2px;
     }
   }
 }

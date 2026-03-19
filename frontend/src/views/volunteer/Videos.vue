@@ -43,15 +43,24 @@
               查看详情
             </el-button>
             <el-button
-              v-if="row.status === 'draft'"
+              v-if="isStatus(row.status, 'DRAFT')"
               type="success"
               size="small"
               @click="handleSubmitReview(row.id)"
             >
               提交审核
             </el-button>
+
             <el-button
-              v-if="row.status === 'approved'"
+              v-if="isStatus(row.status, 'DRAFT')"
+              type="primary"
+              size="small"
+              @click="handleEdit(row.id)"
+            >
+              修改
+            </el-button>
+            <el-button
+              v-if="isStatus(row.status, 'APPROVED')"
               type="success"
               size="small"
               @click="handlePublish(row.id)"
@@ -59,7 +68,7 @@
               上架
             </el-button>
             <el-button
-              v-if="row.status === 'published'"
+              v-if="isStatus(row.status, 'PUBLISHED')"
               type="warning"
               size="small"
               @click="handleOffline(row.id)"
@@ -67,7 +76,7 @@
               下架
             </el-button>
             <el-button
-              v-if="row.status === 'rejected'"
+              v-if="isStatus(row.status, 'REJECTED')"
               type="primary"
               size="small"
               @click="handleEdit(row.id)"
@@ -75,7 +84,7 @@
               重新编辑
             </el-button>
             <el-button
-              v-if="row.status === 'draft' || row.status === 'rejected'"
+              v-if="isStatus(row.status, 'DRAFT') || isStatus(row.status, 'REJECTED')"
               type="danger"
               size="small"
               @click="handleDelete(row.id)"
@@ -92,97 +101,18 @@
     </el-card>
     
     <!-- 视频详情对话框 -->
-    <el-dialog
-      v-model="detailDialogVisible"
-      title="视频详情"
-      width="1200px"
-    >
-      <div v-if="currentVideo" class="video-detail">
-        <el-row :gutter="20">
-          <!-- 左侧：视频播放器 -->
-          <el-col :span="12">
-            <div style="background: #000; border-radius: 8px; position: sticky; top: 20px; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; overflow: hidden">
-              <video
-                v-if="currentVideo.videoUrl"
-                :src="currentVideo.videoUrl"
-                controls
-                style="width: 100%; height: 100%; object-fit: contain"
-              >
-                您的浏览器不支持视频播放
-              </video>
-              <div v-else style="color: #fff; padding: 60px; text-align: center">
-                <el-icon style="font-size: 64px; margin-bottom: 20px"><VideoPlay /></el-icon>
-                <p style="font-size: 16px">视频文件待上传</p>
-              </div>
-            </div>
-          </el-col>
-          
-          <!-- 右侧：详情信息 -->
-          <el-col :span="12">
-            <el-descriptions :column="1" border :label-style="{ width: '100px', padding: '12px 0' }" :content-style="{ padding: '12px 0' }">
-              <el-descriptions-item label="标题">
-                {{ currentVideo.title }}
-              </el-descriptions-item>
-              <el-descriptions-item label="简介">
-                {{ currentVideo.description }}
-              </el-descriptions-item>
-              <el-descriptions-item label="学科">
-                {{ currentVideo.subject }}
-              </el-descriptions-item>
-              <el-descriptions-item label="适用年级">
-                <el-tag v-for="g in currentVideo.grade" :key="g" size="small" style="margin-right: 5px">
-                  {{ g }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="标签">
-                <el-tag v-for="tag in currentVideo.tags" :key="tag" size="small" style="margin-right: 5px">
-                  {{ tag }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="状态">
-                <el-tag :type="getStatusType(currentVideo.status)">
-                  {{ getStatusText(currentVideo.status) }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="播放量">
-                {{ currentVideo.playCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="点赞数">
-                {{ currentVideo.likeCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="收藏数">
-                {{ currentVideo.collectCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="创建时间">
-                {{ formatDate(currentVideo.createdAt) }}
-              </el-descriptions-item>
-              <el-descriptions-item v-if="currentVideo.reviewTime" label="审核时间">
-                {{ formatDate(currentVideo.reviewTime) }}
-              </el-descriptions-item>
-              <el-descriptions-item v-if="currentVideo.reviewerName" label="审核人">
-                {{ currentVideo.reviewerName }}
-              </el-descriptions-item>
-              <el-descriptions-item v-if="currentVideo.reviewReason" label="审核意见">
-                <div style="color: #f56c6c">{{ currentVideo.reviewReason }}</div>
-              </el-descriptions-item>
-            </el-descriptions>
-          </el-col>
-        </el-row>
-      </div>
-      <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <VideoPreviewDialog v-model="detailDialogVisible" :video="currentVideo" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { VideoPlay } from '@element-plus/icons-vue'
 import { VideosApiFp } from '@/api-services/apis/videos-api'
 import type { Video, VideoStatusEnum } from '@/api-services/models'
 import { apiConfig } from '@/apiClient'
+import VideoPreviewDialog from '@/components/VideoPreviewDialog.vue'
 
 // 前端展示用的 UI 类型，兼容原页面字段
 type UiVideo = {
@@ -207,6 +137,9 @@ type UiVideo = {
 const videos = ref<UiVideo[]>([])
 const detailDialogVisible = ref(false)
 const currentVideo = ref<UiVideo | null>(null)
+const router = useRouter()
+
+const isStatus = (s: any, target: string) => String(s || '').toUpperCase() === target
 
 const adaptVideo = (v: Video): UiVideo => {
   return {
@@ -235,10 +168,25 @@ onMounted(async () => {
 
 const loadVideos = async () => {
   try {
-    const req = await VideosApiFp(apiConfig).apiVideosGet()
-    const res = await req()
-    const list = res.data.data || []
-    videos.value = list.map(adaptVideo)
+    // 关键：志愿者“我的视频”应走 /api/videos/mine
+    // 该接口支持 status 筛选。不同后端实现可能只支持单个 status，因此这里按状态分多次拉取后合并。
+    const statuses = ['DRAFT', 'REVIEW', 'APPROVED', 'PUBLISHED', 'REJECTED', 'OFFLINE']
+    const tasks = statuses.map(async (s) => {
+      try {
+        const req = await VideosApiFp(apiConfig).apiVideosMineGet(s)
+        const res = await req()
+        return (res.data.data || []).map(adaptVideo)
+      } catch {
+        return [] as UiVideo[]
+      }
+    })
+    const chunks = await Promise.all(tasks)
+    const merged = chunks.flat()
+
+    // 去重（防止后端忽略 status 参数导致返回重复）
+    const map = new Map<number, UiVideo>()
+    for (const v of merged) map.set(v.id, v)
+    videos.value = Array.from(map.values()).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
   } catch (error: any) {
     ElMessage.error(error.message || '加载视频列表失败')
   }
@@ -322,11 +270,12 @@ const handleOffline = async (id: number) => {
   }
 }
 
-const handleEdit = () => {
-  ElMessage.info('编辑功能开发中')
+const handleEdit = (id: number) => {
+  // 跳转到上传页并带上草稿 id，让上传页回填并支持继续修改/再次提交
+  router.push({ path: '/volunteer/videos/upload', query: { id: String(id) } })
 }
 
-const handleDelete = async () => {
+const handleDelete = async (_id: number) => {
   ElMessage.warning('后端暂未提供删除接口')
 }
 

@@ -84,8 +84,9 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import Logo from '@/components/Logo.vue'
 import { AuthApiFp } from '@/api-services/apis/auth-api'
+import { UsersApiFp } from '@/api-services/apis/users-api'
 import { AuthLoginBodyRoleEnum, type AuthLoginBody } from '@/api-services/models'
-import { apiConfig } from '@/apiClient'
+import { apiConfig, loginConfig } from '@/apiClient'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -150,20 +151,42 @@ const handleLogin = async () => {
           role: mapRoleToApiRole(loginForm.role)
         }
 
-        const request = await AuthApiFp(apiConfig).apiAuthLoginPost(body)
+        console.log('📝 登录请求:', body)
+        
+        // 使用登录专用配置（不包含 token）来调用登录接口
+        const request = await AuthApiFp(loginConfig).apiAuthLoginPost(body)
         const response = await request()
+        
+        console.log('✅ 登录响应:', response)
+        
         const resData = response.data.data
 
         if (!resData || !resData.token) {
           throw new Error('登录返回数据异常')
         }
 
-        // 保存 token
+        // 保存 token（写入 local/sessionStorage，apiConfig.accessToken 会读取）
         userStore.setToken(resData.token)
+        console.log('🔑 Token已保存:', resData.token.substring(0, 20) + '...')
 
-        // 从后端返回 user 中提取必要字段，兼容后端字段命名
-        const apiUser: any = resData.user || {}
-        const backendRole = (apiUser.role || '').toString().toUpperCase()
+        // 获取完整的用户信息（包含学院信息）
+        let finalUser: any = resData.user || {}
+        try {
+          console.log('🔍 获取用户详细信息...')
+          const meReq = await UsersApiFp(apiConfig).apiUsersMeGet()
+          const meRes = await meReq()
+          console.log('✅ 用户详细信息响应:', meRes)
+          // 兼容生成代码的不同返回包装
+          const mePayload = meRes?.data?.data ?? meRes?.data
+          if (mePayload) {
+            finalUser = mePayload
+          }
+        } catch (e) {
+          // 若 /me 调用失败，回退到登录返回的 user
+          console.warn('获取用户详细信息失败，使用登录返回的基础信息', e)
+        }
+
+        const backendRole = (finalUser.role || finalUser.user?.role || '').toString().toUpperCase()
         const finalRole: 'volunteer' | 'college_admin' | 'platform_admin' =
           backendRole === 'PLATFORM_ADMIN'
             ? 'platform_admin'
@@ -171,13 +194,35 @@ const handleLogin = async () => {
               ? 'college_admin'
               : 'volunteer'
 
+        // 根据用户角色从不同的 profile 中提取学院信息
+        let collegeId: number | null = null
+        let collegeName: string = ''
+        let realName: string = ''
+
+        if (finalUser.adminProfile) {
+          // 学院管理员：从 adminProfile 中获取
+          collegeId = finalUser.adminProfile.collegeId ?? finalUser.adminProfile.college?.id ?? null
+          collegeName = finalUser.adminProfile.college?.name ?? ''
+          realName = finalUser.adminProfile.realName ?? ''
+        } else if (finalUser.volunteerProfile) {
+          // 志愿者：从 volunteerProfile 中获取
+          collegeId = finalUser.volunteerProfile.collegeId ?? finalUser.volunteerProfile.college?.id ?? null
+          collegeName = finalUser.volunteerProfile.college?.name ?? ''
+          realName = finalUser.volunteerProfile.realName ?? ''
+        } else {
+          // 兜底：从根级字段获取（平台管理员或旧数据格式）
+          collegeId = finalUser.collegeId ?? finalUser.college?.id ?? null
+          collegeName = finalUser.collegeName ?? finalUser.college?.name ?? ''
+          realName = finalUser.realName ?? finalUser.name ?? ''
+        }
+
         userStore.setUser({
-          id: apiUser.id ?? 0,
-          username: apiUser.username ?? loginForm.username,
-          name: apiUser.name ?? apiUser.realName ?? loginForm.username,
+          id: finalUser.id ?? resData.user?.id ?? 0,
+          username: finalUser.username ?? resData.user?.username ?? loginForm.username,
+          name: realName || (finalUser.name ?? resData.user?.name ?? loginForm.username),
           role: finalRole,
-          collegeId: apiUser.collegeId,
-          collegeName: apiUser.collegeName
+          collegeId: collegeId ?? undefined,
+          collegeName: collegeName
         })
 
         ElMessage.success('登录成功')
@@ -191,7 +236,27 @@ const handleLogin = async () => {
           router.push('/platform-admin')
         }
       } catch (error: any) {
-        ElMessage.error(error.message || '登录失败')
+        console.error('❌ 登录错误:', error)
+        
+        // 提取详细的错误信息
+        let errorMsg = error.message || '登录失败'
+        if (error.response) {
+          const status = error.response.status
+          const data = error.response.data
+          console.error('❌ HTTP错误信息:', { status, data })
+          
+          if (status === 401) {
+            errorMsg = '账号或密码错误，或角色不匹配'
+          } else if (status === 400) {
+            errorMsg = data?.message || data?.error || '请求参数错误'
+          } else if (status === 404) {
+            errorMsg = '登录接口未找到，请检查后端地址'
+          } else {
+            errorMsg = data?.message || data?.error || `登录失败: HTTP ${status}`
+          }
+        }
+        
+        ElMessage.error(errorMsg)
       } finally {
         loading.value = false
       }

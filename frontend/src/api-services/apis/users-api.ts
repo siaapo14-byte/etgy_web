@@ -536,6 +536,106 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
         },
         /**
          * 
+         * @summary 批量导入志愿者账号（Excel .xlsx，学院管理员）
+         * @param {Blob} [file] 
+         * @param {number} [collegeId] 平台管理员导入时需要；学院管理员会被强制使用自身学院
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUsersVolunteersBatchExcelPostForm: async (file?: Blob, collegeId?: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/users/volunteers/batch-excel`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+            const localVarFormParams = new FormData();
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            if (collegeId !== undefined) {
+                localVarQueryParameter['collegeId'] = collegeId;
+            }
+
+
+            if (file !== undefined) { 
+                localVarFormParams.append('file', file as any);
+            }
+
+            localVarHeaderParameter['Content-Type'] = 'multipart/form-data';
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = localVarFormParams;
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 下载志愿者批量导入 Excel 模板（.xlsx）
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUsersVolunteersBatchExcelTemplateGet: async (options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/users/volunteers/batch-excel/template`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary 获取志愿者列表（管理员）
          * @param {number} [collegeId] 
          * @param {string} [status] 
@@ -869,6 +969,34 @@ export const UsersApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary 批量导入志愿者账号（Excel .xlsx，学院管理员）
+         * @param {Blob} [file] 
+         * @param {number} [collegeId] 平台管理员导入时需要；学院管理员会被强制使用自身学院
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersVolunteersBatchExcelPostForm(file?: Blob, collegeId?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2011>>> {
+            const localVarAxiosArgs = await UsersApiAxiosParamCreator(configuration).apiUsersVolunteersBatchExcelPostForm(file, collegeId, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 
+         * @summary 下载志愿者批量导入 Excel 模板（.xlsx）
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersVolunteersBatchExcelTemplateGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<Blob>>> {
+            const localVarAxiosArgs = await UsersApiAxiosParamCreator(configuration).apiUsersVolunteersBatchExcelTemplateGet(options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 
          * @summary 获取志愿者列表（管理员）
          * @param {number} [collegeId] 
          * @param {string} [status] 
@@ -1030,6 +1158,26 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
         },
         /**
          * 
+         * @summary 批量导入志愿者账号（Excel .xlsx，学院管理员）
+         * @param {Blob} [file] 
+         * @param {number} [collegeId] 平台管理员导入时需要；学院管理员会被强制使用自身学院
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersVolunteersBatchExcelPostForm(file?: Blob, collegeId?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2011>> {
+            return UsersApiFp(configuration).apiUsersVolunteersBatchExcelPostForm(file, collegeId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 下载志愿者批量导入 Excel 模板（.xlsx）
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersVolunteersBatchExcelTemplateGet(options?: AxiosRequestConfig): Promise<AxiosResponse<Blob>> {
+            return UsersApiFp(configuration).apiUsersVolunteersBatchExcelTemplateGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary 获取志愿者列表（管理员）
          * @param {number} [collegeId] 
          * @param {string} [status] 
@@ -1187,6 +1335,28 @@ export class UsersApi extends BaseAPI {
      */
     public async apiUsersVolunteersAccountsPost(body?: VolunteersAccountsBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
         return UsersApiFp(this.configuration).apiUsersVolunteersAccountsPost(body, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 
+     * @summary 批量导入志愿者账号（Excel .xlsx，学院管理员）
+     * @param {Blob} [file] 
+     * @param {number} [collegeId] 平台管理员导入时需要；学院管理员会被强制使用自身学院
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof UsersApi
+     */
+    public async apiUsersVolunteersBatchExcelPostForm(file?: Blob, collegeId?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2011>> {
+        return UsersApiFp(this.configuration).apiUsersVolunteersBatchExcelPostForm(file, collegeId, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 
+     * @summary 下载志愿者批量导入 Excel 模板（.xlsx）
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof UsersApi
+     */
+    public async apiUsersVolunteersBatchExcelTemplateGet(options?: AxiosRequestConfig) : Promise<AxiosResponse<Blob>> {
+        return UsersApiFp(this.configuration).apiUsersVolunteersBatchExcelTemplateGet(options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 

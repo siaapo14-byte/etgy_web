@@ -5,7 +5,7 @@ set dir=%~dp0
 @REM 主要模块接口
 set moduleName=apiServices
 set apiServicesPath=%dir%..\src\api-services\
-set apiUrl=http://192.168.1.4:3000/api/docs.json
+set apiUrl=http://8.148.215.20/api/docs.json
 
 if "%1"=="approvalFlow" (
   set moduleName=approvalFlow

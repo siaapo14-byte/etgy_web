@@ -999,6 +999,84 @@ export const VideosApiAxiosParamCreator = function (configuration?: Configuratio
         },
         /**
          * 
+         * @summary 志愿者查看我的视频列表（可按状态筛选）
+         * @param {string} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）
+         * @param {string} [search] 按标题/简介模糊搜索（仅我的视频）
+         * @param {string} [grade] 
+         * @param {string} [subject] 
+         * @param {string} [sort] 
+         * @param {number} [page] 
+         * @param {number} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiVideosMineGet: async (status?: string, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/videos/mine`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            if (status !== undefined) {
+                localVarQueryParameter['status'] = status;
+            }
+
+            if (search !== undefined) {
+                localVarQueryParameter['search'] = search;
+            }
+
+            if (grade !== undefined) {
+                localVarQueryParameter['grade'] = grade;
+            }
+
+            if (subject !== undefined) {
+                localVarQueryParameter['subject'] = subject;
+            }
+
+            if (sort !== undefined) {
+                localVarQueryParameter['sort'] = sort;
+            }
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (pageSize !== undefined) {
+                localVarQueryParameter['pageSize'] = pageSize;
+            }
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary 创建视频草稿（志愿者）
          * @param {ApiVideosBody} [body] Create video draft
          * @param {*} [options] Override http request option.
@@ -1394,6 +1472,26 @@ export const VideosApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary 志愿者查看我的视频列表（可按状态筛选）
+         * @param {string} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）
+         * @param {string} [search] 按标题/简介模糊搜索（仅我的视频）
+         * @param {string} [grade] 
+         * @param {string} [subject] 
+         * @param {string} [sort] 
+         * @param {number} [page] 
+         * @param {number} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosMineGet(status?: string, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2002>>> {
+            const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosMineGet(status, search, grade, subject, sort, page, pageSize, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 
          * @summary 创建视频草稿（志愿者）
          * @param {ApiVideosBody} [body] Create video draft
          * @param {*} [options] Override http request option.
@@ -1634,6 +1732,22 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
          */
         async apiVideosMineDashboardGet(options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
             return VideosApiFp(configuration).apiVideosMineDashboardGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 志愿者查看我的视频列表（可按状态筛选）
+         * @param {string} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）
+         * @param {string} [search] 按标题/简介模糊搜索（仅我的视频）
+         * @param {string} [grade] 
+         * @param {string} [subject] 
+         * @param {string} [sort] 
+         * @param {number} [page] 
+         * @param {number} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosMineGet(status?: string, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2002>> {
+            return VideosApiFp(configuration).apiVideosMineGet(status, search, grade, subject, sort, page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -1888,6 +2002,23 @@ export class VideosApi extends BaseAPI {
      */
     public async apiVideosMineDashboardGet(options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
         return VideosApiFp(this.configuration).apiVideosMineDashboardGet(options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 
+     * @summary 志愿者查看我的视频列表（可按状态筛选）
+     * @param {string} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）
+     * @param {string} [search] 按标题/简介模糊搜索（仅我的视频）
+     * @param {string} [grade] 
+     * @param {string} [subject] 
+     * @param {string} [sort] 
+     * @param {number} [page] 
+     * @param {number} [pageSize] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VideosApi
+     */
+    public async apiVideosMineGet(status?: string, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2002>> {
+        return VideosApiFp(this.configuration).apiVideosMineGet(status, search, grade, subject, sort, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 

@@ -19,6 +19,7 @@ import 'echarts/core'
 
 import App from './App.vue'
 import router from './router'
+import { useUserStore } from '@/stores/user'
 
 // 注册ECharts组件
 use([
@@ -39,7 +40,11 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
 
-app.use(createPinia())
+const pinia = createPinia()
+app.use(pinia)
+
+// 刷新/重开页面时：从本地缓存回灌 user/token，避免资料页等依赖 store 的页面拿不到用户信息
+useUserStore(pinia).initUser()
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
 app.component('v-chart', ECharts)

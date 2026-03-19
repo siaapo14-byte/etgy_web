@@ -4,72 +4,68 @@
       <h2>视频状态管理</h2>
     </div>
     
-    <el-card>
-      <div class="filter-bar">
-        <el-form :inline="true" :model="filters">
-          <el-form-item label="状态">
-            <el-select v-model="filters.status" placeholder="全部" clearable style="width: 150px">
-              <el-option label="审核通过" value="approved" />
-              <el-option label="已上架" value="published" />
-              <el-option label="已下架" value="offline" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="志愿者">
-            <el-input v-model="filters.volunteer" placeholder="搜索志愿者" clearable style="width: 200px" />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleSearch">搜索</el-button>
-            <el-button @click="handleReset">重置</el-button>
-          </el-form-item>
-        </el-form>
+    <div class="filter-bar">
+      <el-form :inline="true" :model="filters">
+        <el-form-item label="状态">
+          <el-select v-model="filters.status" placeholder="全部" clearable style="width: 150px">
+            <el-option label="审核通过" value="approved" />
+            <el-option label="已上架" value="published" />
+            <el-option label="已下架" value="offline" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="志愿者">
+          <el-input v-model="filters.volunteer" placeholder="搜索志愿者" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">搜索</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+    <div class="video-grid" @scroll.passive="handleScroll">
+      <div v-for="video in filteredVideos" :key="video.id" class="video-item">
+        <div class="video-thumb"
+          @mouseenter="startHover(video.id)"
+          @mouseleave="stopHover(video.id)"
+        >
+          <!-- 显示封面或视频 -->
+          <img 
+            v-if="video.coverUrl"
+            :src="video.coverUrl" 
+            alt="视频封面"
+            style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; background: #f0f0f0;"
+          />
+          <video
+            v-else
+            :src="video.videoUrl"
+            :controls="false"
+            ref="videoRefs[video.id]"
+            style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;"
+          />
+          <div class="video-overlay">
+            <div class="dots-menu" @click.stop="openMenu(video)">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+        <div class="video-info">
+          <div class="video-title">{{ video.title }}</div>
+          <div class="video-meta">
+            <span>{{ video.volunteerName }}</span>
+            <span>{{ getStatusText(video.status) }}</span>
+            <span>{{ video.playCount }}次播放</span>
+          </div>
+        </div>
       </div>
-      
-      <el-table :data="filteredVideos" style="width: 100%">
-        <el-table-column prop="title" label="标题" width="250" />
-        <el-table-column prop="volunteerName" label="志愿者" width="120" />
-        <el-table-column prop="subject" label="学科" width="100" />
-        <el-table-column prop="status" label="状态" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="playCount" label="播放量" width="100" />
-        <el-table-column prop="createdAt" label="审核通过时间" width="180">
-          <template #default="{ row }">
-            {{ row.reviewTime ? formatDate(row.reviewTime) : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-if="row.status === 'approved'"
-              type="success"
-              size="small"
-              @click="handlePublish(row)"
-            >
-              发布
-            </el-button>
-            <el-button
-              v-if="row.status === 'published'"
-              type="warning"
-              size="small"
-              @click="handleOffline(row)"
-            >
-              下线
-            </el-button>
-            <el-button
-              type="primary"
-              size="small"
-              @click="handlePreview(row)"
-            >
-              预览
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+      <div v-if="loadingMore" class="loading-more">加载中...</div>
+    </div>
+    <el-dropdown v-if="menuVisible" :visible="menuVisible" @visible-change="menuVisible = $event" :teleported="false" :style="{ position: 'fixed', left: menuX + 'px', top: menuY + 'px', zIndex: 9999 }">
+      <el-dropdown-menu>
+        <el-dropdown-item @click="handlePublish(menuVideo)">发布</el-dropdown-item>
+        <el-dropdown-item @click="handleOffline(menuVideo)">下线</el-dropdown-item>
+        <el-dropdown-item @click="handlePreview(menuVideo)">预览</el-dropdown-item>
+      </el-dropdown-menu>
+    </el-dropdown>
     
     <!-- 下线对话框 -->
     <el-dialog
@@ -94,101 +90,27 @@
     </el-dialog>
     
     <!-- 视频预览对话框 -->
-    <el-dialog
-      v-model="previewDialogVisible"
-      title="视频详情"
-      width="1200px"
-    >
-      <div v-if="currentPreviewVideo" class="video-detail">
-        <el-row :gutter="20">
-          <!-- 左侧：视频播放器 -->
-          <el-col :span="12">
-            <div style="background: #000; border-radius: 8px; position: sticky; top: 20px; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; overflow: hidden">
-              <video
-                v-if="currentPreviewVideo.videoUrl"
-                :src="currentPreviewVideo.videoUrl"
-                controls
-                style="width: 100%; height: 100%; object-fit: contain"
-              >
-                您的浏览器不支持视频播放
-              </video>
-              <div v-else style="color: #fff; padding: 60px; text-align: center">
-                <el-icon style="font-size: 64px; margin-bottom: 20px"><VideoPlay /></el-icon>
-                <p style="font-size: 16px">视频文件待上传</p>
-              </div>
-            </div>
-          </el-col>
-          
-          <!-- 右侧：详情信息 -->
-          <el-col :span="12">
-            <el-descriptions :column="1" border :label-style="{ width: '100px', padding: '12px 0' }" :content-style="{ padding: '12px 0' }">
-              <el-descriptions-item label="标题">
-                {{ currentPreviewVideo.title }}
-              </el-descriptions-item>
-              <el-descriptions-item label="简介">
-                {{ currentPreviewVideo.description }}
-              </el-descriptions-item>
-              <el-descriptions-item label="志愿者">
-                {{ currentPreviewVideo.volunteerName }}
-              </el-descriptions-item>
-              <el-descriptions-item label="所属学院">
-                {{ currentPreviewVideo.collegeName }}
-              </el-descriptions-item>
-              <el-descriptions-item label="学科">
-                {{ currentPreviewVideo.subject }}
-              </el-descriptions-item>
-              <el-descriptions-item label="适用年级">
-                <el-tag v-for="g in currentPreviewVideo.grade" :key="g" size="small" style="margin-right: 5px">
-                  {{ g }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="标签">
-                <el-tag v-for="tag in currentPreviewVideo.tags" :key="tag" size="small" style="margin-right: 5px">
-                  {{ tag }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="状态">
-                <el-tag :type="getStatusType(currentPreviewVideo.status)">
-                  {{ getStatusText(currentPreviewVideo.status) }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="播放量">
-                {{ currentPreviewVideo.playCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="点赞数">
-                {{ currentPreviewVideo.likeCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="收藏数">
-                {{ currentPreviewVideo.collectCount }}
-              </el-descriptions-item>
-              <el-descriptions-item label="创建时间">
-                {{ formatDate(currentPreviewVideo.createdAt) }}
-              </el-descriptions-item>
-              <el-descriptions-item v-if="currentPreviewVideo.reviewTime" label="审核时间">
-                {{ formatDate(currentPreviewVideo.reviewTime) }}
-              </el-descriptions-item>
-              <el-descriptions-item v-if="currentPreviewVideo.reviewerName" label="审核人">
-                {{ currentPreviewVideo.reviewerName }}
-              </el-descriptions-item>
-            </el-descriptions>
-          </el-col>
-        </el-row>
-      </div>
-      <template #footer>
-        <el-button @click="previewDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    <VideoPreviewDialog v-model="previewDialogVisible" :video="currentPreviewVideo" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { VideoPlay } from '@element-plus/icons-vue'
 import { videoApi } from '@/utils/api'
 import type { Video } from '@/utils/mockData'
+import VideoPreviewDialog from '@/components/VideoPreviewDialog.vue'
 
-const videos = ref<Video[]>([])
+// 状态定义
+const videos = ref<Video[]>([]) // 存储所有视频（或当前页视频）
+const loadingMore = ref(false)
+const menuVisible = ref(false)
+const menuVideo = ref<any>(null)
+const menuX = ref(0)
+const menuY = ref(0)
+const videoRefs = reactive<Record<number, HTMLVideoElement | null>>({})
+const hoverTimers = reactive<Record<number, any>>({})
+
 const filters = reactive({
   status: '',
   volunteer: ''
@@ -202,6 +124,39 @@ const offlineForm = reactive({
   reason: ''
 })
 
+// 加载逻辑
+const loadVideos = async () => {
+  loadingMore.value = true
+  try {
+    // 这里暂时使用原有的API一次性获取所有视频
+    // 实际无限滚动场景建议改为分页API: getVideos(page, pageSize)
+    const allVideos = await videoApi.getVideos()
+    
+    // 简单模拟分页追加效果（如果已经是全部数据则直接赋值）
+    if (videos.value.length === 0) {
+      videos.value = allVideos
+    } else {
+      // 如果后端支持分页，这里应该是追加新数据
+      // 目前演示环境还是全部替换或保持不变
+      // videos.value = [...videos.value, ...newVideos]
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载视频列表失败')
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+// 滚动加载
+function handleScroll(e: Event) {
+  const el = e.target as HTMLElement
+  if (el.scrollHeight - el.scrollTop - el.clientHeight < 100 && !loadingMore.value) {
+    // 触发加载更多（如果API支持分页）
+    // loadVideos()
+  }
+}
+
+// 过滤计算属性
 const filteredVideos = computed(() => {
   let result = videos.value.filter(v => 
     v.status === 'approved' || v.status === 'published' || v.status === 'offline'
@@ -220,18 +175,38 @@ const filteredVideos = computed(() => {
   return result
 })
 
-onMounted(async () => {
-  await loadVideos()
-})
+// 悬停播放逻辑
+function startHover(id: number) {
+  hoverTimers[id] = setTimeout(() => {
+    const v = videoRefs[id]
+    if (v) v.play()
+  }, 1000)
+}
 
-const loadVideos = async () => {
-  try {
-    videos.value = await videoApi.getVideos()
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载视频列表失败')
+function stopHover(id: number) {
+  clearTimeout(hoverTimers[id])
+  const v = videoRefs[id]
+  if (v) {
+    v.pause()
+    v.currentTime = 0 // 重置播放进度
   }
 }
 
+// 菜单逻辑
+function openMenu(video: any) {
+  menuVideo.value = video
+  menuVisible.value = true
+  nextTick(() => {
+    // 定位到鼠标位置
+    const event = window.event as MouseEvent
+    if (event) {
+      menuX.value = event.clientX
+      menuY.value = event.clientY
+    }
+  })
+}
+
+// 工具函数
 const getStatusType = (status: string) => {
   const map: Record<string, string> = {
     approved: 'success',
@@ -254,8 +229,10 @@ const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleString('zh-CN')
 }
 
+// 事件处理
 const handleSearch = () => {
-  // 搜索逻辑已在computed中实现
+  // 重新加载或由computed自动处理
+  loadVideos()
 }
 
 const handleReset = () => {
@@ -285,34 +262,116 @@ const handleOffline = (video: Video) => {
 }
 
 const confirmOffline = async () => {
-  if (!offlineForm.reason.trim()) {
+  if (!offlineForm.reason) {
     ElMessage.warning('请输入下线理由')
     return
   }
   
-  if (!currentOfflineVideo.value) return
-  
   try {
-    // 后端下线接口目前不接收 reason（OpenAPI: /videos/{id}/offline），这里先执行真实下线
-    console.info('[college-admin/VideoManage] offline reason:', offlineForm.reason)
-    await videoApi.togglePublish(currentOfflineVideo.value.id, 'offline')
-    ElMessage.success('已下线')
+    await videoApi.togglePublish(currentOfflineVideo.value!.id, 'offline')
+    // 这里应该调用设置理由的API，待补充
+    ElMessage.success('下线成功')
     offlineDialogVisible.value = false
-    currentOfflineVideo.value = null
-    offlineForm.reason = ''
     await loadVideos()
   } catch (error: any) {
-    ElMessage.error(error.message || '操作失败')
+    ElMessage.error(error.message || '下线失败')
   }
 }
 
 const handlePreview = (video: Video) => {
-  previewDialogVisible.value = true
   currentPreviewVideo.value = video
+  previewDialogVisible.value = true
 }
+
+onMounted(() => {
+  loadVideos()
+})
 </script>
 
 <style scoped lang="scss">
+  .video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 24px;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: #f8f8f8;
+    border-radius: 12px;
+  }
+  .video-item {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .video-thumb {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #000;
+  }
+  .video-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .dots-menu {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    width: 32px;
+    height: 32px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    pointer-events: auto;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 0.2s;
+  }
+  .dots-menu span {
+    display: block;
+    width: 6px;
+    height: 6px;
+    background: #fff;
+    border-radius: 50%;
+  }
+  .video-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+    color: #333;
+  }
+  .video-title {
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+  .video-meta {
+    display: flex;
+    gap: 12px;
+    color: #888;
+  }
+  .loading-more {
+    grid-column: span 2;
+    text-align: center;
+    color: #888;
+    padding: 16px;
+  }
 .manage-page {
   .page-header {
     margin-bottom: 20px;

@@ -90,12 +90,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '志愿者管理' }
       },
       {
-        path: 'children',
-        name: 'CollegeChildren',
-        component: () => import('@/views/college-admin/Children.vue'),
-        meta: { title: '儿童账号管理' }
-      },
-      {
         path: 'videos/manage',
         name: 'CollegeVideoManage',
         component: () => import('@/views/college-admin/VideoManage.vue'),
