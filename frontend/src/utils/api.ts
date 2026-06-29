@@ -21,6 +21,12 @@ import type {
   LiveRoomStatusEnum
 } from '@/api-services/models'
 
+/** 从 axios / swagger 客户端错误中提取后端 message */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  const e = error as { response?: { data?: { message?: string } }; body?: { message?: string }; message?: string }
+  return e?.response?.data?.message || e?.body?.message || e?.message || fallback
+}
+
 const adaptVideo = (v: ApiVideo): Video => {
   // mockData 的字段命名与后端不同，这里尽量对齐旧 UI
   const gradeArr = v.gradeRange

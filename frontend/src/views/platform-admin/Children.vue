@@ -215,7 +215,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, Upload } from '@element-plus/icons-vue'
-import { childApi } from '@/utils/api'
+import { childApi, getApiErrorMessage } from '@/utils/api'
 import type { Child } from '@/utils/mockData'
 
 const children = ref<Child[]>([])
@@ -468,8 +468,9 @@ const handleTogglePasswordVisibility = async (child: Child) => {
     const pwd = await childApi.getChildPassword(id)
     ;(child as any).password = pwd || ''
     visiblePasswords.value[id] = true
+    ElMessage.info('以下为该账号当前可登录密码；若与预期不符，请点击「修改密码」重置')
   } catch (e: any) {
-    ElMessage.error(e?.message || '获取密码失败')
+    ElMessage.error(getApiErrorMessage(e, '获取密码失败'))
   } finally {
     passwordLoading.value[id] = false
   }
