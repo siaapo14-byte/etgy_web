@@ -7,22 +7,14 @@
     <el-card>
       <div class="filter-bar">
         <el-form :inline="true" :model="filters">
-          <el-form-item label="操作类型">
-            <el-select v-model="filters.action" placeholder="全部" clearable style="width: 150px">
-              <el-option label="审核通过" value="审核通过" />
-              <el-option label="审核驳回" value="审核驳回" />
-              <el-option label="上架" value="上架" />
-              <el-option label="下架" value="下架" />
-            </el-select>
-          </el-form-item>
           <el-form-item label="资源类型">
-            <el-select v-model="filters.resourceType" placeholder="全部" clearable style="width: 150px">
-              <el-option label="视频" value="video" />
-              <el-option label="直播" value="live" />
+            <el-select v-model="filters.targetType" placeholder="全部" clearable style="width: 150px">
+              <el-option label="视频" value="VIDEO" />
+              <el-option label="直播" value="LIVE" />
             </el-select>
           </el-form-item>
           <el-form-item label="操作人">
-            <el-input v-model="filters.userName" placeholder="搜索操作人" clearable style="width: 200px" />
+            <el-input v-model="filters.operatorName" placeholder="搜索操作人" clearable style="width: 200px" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -31,7 +23,7 @@
         </el-form>
       </div>
       
-      <el-table :data="filteredLogs" style="width: 100%">
+      <el-table :data="logs" style="width: 100%" v-loading="loading">
         <el-table-column prop="userName" label="操作人" width="120" />
         <el-table-column prop="role" label="角色" width="120" />
         <el-table-column prop="action" label="操作" width="120" />
@@ -44,38 +36,47 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pager">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @current-change="loadLogs"
+          @size-change="handleSizeChange"
+        />
+      </div>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { auditApi } from '@/utils/api'
-import type { AuditLog } from '@/utils/mockData'
+type UiAuditLog = {
+  id: number
+  userId: number
+  userName: string
+  role: string
+  action: string
+  resourceType: string
+  resourceId: number
+  details: string
+  ip: string
+  createdAt: string
+}
 
-const logs = ref<AuditLog[]>([])
+const logs = ref<UiAuditLog[]>([])
+const loading = ref(false)
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+
 const filters = reactive({
-  action: '',
-  resourceType: '',
-  userName: ''
-})
-
-const filteredLogs = computed(() => {
-  let result = logs.value
-  
-  if (filters.action) {
-    result = result.filter(l => l.action === filters.action)
-  }
-  
-  if (filters.resourceType) {
-    result = result.filter(l => l.resourceType === filters.resourceType)
-  }
-  
-  if (filters.userName) {
-    result = result.filter(l => l.userName.includes(filters.userName))
-  }
-  
-  return result
+  targetType: '' as '' | 'VIDEO' | 'LIVE',
+  operatorName: ''
 })
 
 onMounted(async () => {
@@ -84,9 +85,18 @@ onMounted(async () => {
 
 const loadLogs = async () => {
   try {
-    logs.value = await auditApi.getAuditLogs()
+    loading.value = true
+    const res = await auditApi.getAuditLogs({
+      targetType: filters.targetType || undefined,
+      page: page.value,
+      pageSize: pageSize.value
+    })
+    logs.value = res.items
+    total.value = res.total
   } catch (error: any) {
     console.error('加载审计日志失败', error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -95,13 +105,21 @@ const formatDate = (dateStr: string) => {
 }
 
 const handleSearch = () => {
-  // 搜索逻辑已在computed中实现
+  page.value = 1
+  loadLogs()
 }
 
 const handleReset = () => {
-  filters.action = ''
-  filters.resourceType = ''
-  filters.userName = ''
+  filters.targetType = ''
+  filters.operatorName = ''
+  page.value = 1
+  loadLogs()
+}
+
+const handleSizeChange = (size: number) => {
+  pageSize.value = size
+  page.value = 1
+  loadLogs()
 }
 </script>
 
@@ -118,6 +136,12 @@ const handleReset = () => {
   
   .filter-bar {
     margin-bottom: 20px;
+  }
+
+  .pager {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 </style>

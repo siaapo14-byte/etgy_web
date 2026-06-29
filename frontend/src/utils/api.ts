@@ -255,7 +255,16 @@ export const liveApi = {
         params?.pageSize
       )
       const res = await req()
-      const list = res.data.data || []
+      const payload: any = res?.data?.data ?? res?.data
+      const list: any[] = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : Array.isArray(payload?.list)
+            ? payload.list
+            : Array.isArray(payload?.records)
+              ? payload.records
+              : []
       return list.map((l: any) => adaptLive(l as ApiLiveRoom))
     } catch (e) {
       console.warn('liveApi.getLives: 获取直播列表失败，返回空数组', e)
@@ -671,7 +680,7 @@ export const childApi = {
 
   // 修改儿童账号密码（平台管理员）
   setChildPassword: async (id: number, password: string): Promise<void> => {
-    const req = await ChildrenApiFp(apiConfig).apiChildrenIdPasswordPost(String(id), { password } as any)
+    const req = await ChildrenApiFp(apiConfig).apiChildrenIdPasswordPost(String(id), { newPassword: password })
     await req()
   }
 }
@@ -686,7 +695,7 @@ export const platformPasswordApi = {
   },
 
   setCollegeAdminPassword: async (id: number, password: string): Promise<void> => {
-    const req = await PlatformApiFp(apiConfig).apiPlatformCollegeAdminsIdPasswordPost(String(id), { password } as any)
+    const req = await PlatformApiFp(apiConfig).apiPlatformCollegeAdminsIdPasswordPost(String(id), { newPassword: password })
     await req()
   }
 }
@@ -771,8 +780,8 @@ export const reviewApi = {
   // 审核视频
   reviewVideo: async (id: number, action: 'approve' | 'reject', reason?: string): Promise<void> => {
     const req = await VideosApiFp(apiConfig).apiVideosIdAuditPost(String(id), {
-      status: action === 'approve' ? 'APPROVED' : 'REJECTED',
-      rejectReason: action === 'reject' ? (reason || '') : undefined
+      pass: action === 'approve',
+      reason: action === 'reject' ? (reason || '') : undefined
     } as any)
     await req()
   },
@@ -790,7 +799,7 @@ export const reviewApi = {
 // 审计日志API
 export const auditApi = {
   // 获取审计日志
-  getAuditLogs: async (params?: any): Promise<AuditLog[]> => {
+  getAuditLogs: async (params?: any): Promise<{ items: AuditLog[]; total: number; page: number; pageSize: number }> => {
     const req = await PlatformApiFp(apiConfig).apiPlatformAuditLogsGet(
       params?.collegeId,
       params?.action,
@@ -803,23 +812,32 @@ export const auditApi = {
       params?.pageSize
     )
     const res = await req()
-    const list = res.data.data || []
-    if (!Array.isArray(list)) {
-      console.warn('getAuditLogs: 后端返回的数据不是数组:', list)
-      return []
+    const payload: any = res.data?.data ?? res.data
+
+    const page = Number(payload?.page ?? params?.page ?? 1)
+    const pageSize = Number(payload?.pageSize ?? params?.pageSize ?? 20)
+    const total = Number(payload?.total ?? 0)
+
+    const rawItems: any = payload?.items ?? payload?.list ?? payload?.records ?? payload?.data ?? payload
+    const list: any[] = Array.isArray(rawItems) ? rawItems : []
+    if (!Array.isArray(rawItems)) {
+      console.warn('getAuditLogs: 后端返回的数据不是数组:', rawItems)
     }
-    return list.map((a: any) => ({
+
+    const items = list.map((a: any) => ({
       id: a.id,
       userId: a.operatorId ?? 0,
-      userName: a.operatorName ?? '',
-      role: a.operatorRole ?? '',
+      userName: a.operatorName ?? a.operator?.name ?? '',
+      role: a.operatorRole ?? a.operator?.role ?? '',
       action: a.action ?? '',
       resourceType: a.targetType ?? '',
       resourceId: Number(a.targetId ?? 0),
       details: a.detail ?? '',
-      ip: a.ip ?? '',
+      ip: a.clientIp ?? a.ip ?? '',
       createdAt: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString()
     }))
+
+    return { items, total, page, pageSize }
   }
 }
 

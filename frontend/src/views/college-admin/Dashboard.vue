@@ -64,14 +64,6 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="6">
-        <el-card>
-          <div class="stat-item">
-            <div class="stat-value">{{ statistics.activeChildren }}</div>
-            <div class="stat-label">活跃儿童</div>
-          </div>
-        </el-card>
-      </el-col>
     </el-row>
     
     <el-row :gutter="20" style="margin-top: 20px">
@@ -251,12 +243,42 @@ import { ElMessage } from 'element-plus'
 import { videoApi, liveApi, auditApi } from '@/utils/api'
 import type { Video, Live, AuditLog } from '@/utils/mockData'
 import type { EChartsOption } from 'echarts'
+import { PlatformApiFp } from '@/api-services/apis/platform-api'
+import { apiConfig } from '@/apiClient'
 
 const router = useRouter()
 
 const videos = ref<Video[]>([])
 const lives = ref<Live[]>([])
 const auditLogs = ref<AuditLog[]>([])
+
+type DashboardData = {
+  scope?: { collegeId?: number }
+  totals?: {
+    videoTotal?: number
+    liveTotal?: number
+    volunteerActiveCount?: number
+  }
+  today?: {
+    newVideos?: number
+    newLives?: number
+  }
+  video?: {
+    byStatus?: Record<string, number>
+    pendingReview?: number
+    approved?: number
+    published?: number
+  }
+  live?: {
+    byStatus?: Record<string, number>
+    pendingReview?: number
+    passed?: number
+    published?: number
+    living?: number
+  }
+}
+
+const dashboard = ref<DashboardData | null>(null)
 
 const offlineDialogVisible = ref(false)
 const currentOfflineVideo = ref<Video | null>(null)
@@ -265,15 +287,19 @@ const offlineForm = reactive({
 })
 
 const statistics = computed(() => {
-  const totalVideos = videos.value.length
-  const pendingReview = videos.value.filter(v => v.status === 'reviewing').length +
-                       lives.value.filter(l => l.status === 'reviewing').length
-  const approvedCount = videos.value.filter(v => v.status === 'approved' || v.status === 'published').length
+  const d = dashboard.value
+  const totalVideos = d?.totals?.videoTotal ?? videos.value.length
+  const pendingReview = d?.video?.pendingReview ??
+    (videos.value.filter(v => v.status === 'reviewing').length + lives.value.filter(l => l.status === 'reviewing').length)
+
+  const approvedCount = d?.video?.approved ??
+    videos.value.filter(v => v.status === 'approved' || v.status === 'published').length
+
   const approvalRate = totalVideos > 0 ? Math.round((approvedCount / totalVideos) * 100) : 0
-  const publishedVideos = videos.value.filter(v => v.status === 'published').length
+  const publishedVideos = d?.video?.published ?? videos.value.filter(v => v.status === 'published').length
   const totalPlays = videos.value.reduce((sum, v) => sum + v.playCount, 0)
-  const liveCount = lives.value.filter(l => l.status === 'live' || l.status === 'ended').length
-  
+  const liveCount = d?.totals?.liveTotal ?? lives.value.length
+
   return {
     totalVideos,
     pendingReview,
@@ -281,8 +307,7 @@ const statistics = computed(() => {
     publishedVideos,
     totalPlays,
     liveCount,
-    activeVolunteers: 12,
-    activeChildren: 45
+    activeVolunteers: d?.totals?.volunteerActiveCount ?? 0
   }
 })
 
@@ -328,12 +353,12 @@ const pendingItems = computed(() => {
 
 // 视频状态分布饼图
 const videoStatusPieOption = computed<EChartsOption>(() => {
-  const total = videos.value.length
-  const published = videos.value.filter(v => v.status === 'published').length
-  const approved = videos.value.filter(v => v.status === 'approved').length
-  const reviewing = videos.value.filter(v => v.status === 'reviewing').length
-  const rejected = videos.value.filter(v => v.status === 'rejected').length
-  const draft = videos.value.filter(v => v.status === 'draft').length
+  const byStatus = dashboard.value?.video?.byStatus || {}
+  // 后端统一大写枚举；本页按后端返回渲染（并明确不展示草稿 DRAFT）
+  const published = byStatus['PUBLISHED'] ?? 0
+  const approved = byStatus['APPROVED'] ?? 0
+  const reviewing = byStatus['REVIEW'] ?? 0
+  const rejected = byStatus['REJECTED'] ?? 0
   
   return {
     tooltip: {
@@ -365,8 +390,7 @@ const videoStatusPieOption = computed<EChartsOption>(() => {
           { value: published, name: '已上架', itemStyle: { color: '#67c23a' } },
           { value: approved, name: '审核通过', itemStyle: { color: '#409eff' } },
           { value: reviewing, name: '审核中', itemStyle: { color: '#e6a23c' } },
-          { value: rejected, name: '已驳回', itemStyle: { color: '#f56c6c' } },
-          { value: draft, name: '草稿', itemStyle: { color: '#909399' } }
+          { value: rejected, name: '已驳回', itemStyle: { color: '#f56c6c' } }
         ],
         emphasis: {
           itemStyle: {
@@ -382,14 +406,9 @@ const videoStatusPieOption = computed<EChartsOption>(() => {
 
 // 视频上传趋势
 const videoTrendOption = computed<EChartsOption>(() => {
-  const dates = []
-  const counts = []
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    dates.push(date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }))
-    counts.push(Math.floor(Math.random() * 8) + 3)
-  }
+  // 用真实数据替换随机数：目前后端只返回“今日新增”，先用条形图展示即可
+  const dates = ['今日']
+  const counts = [dashboard.value?.today?.newVideos ?? 0]
   
   return {
     tooltip: {
@@ -412,23 +431,9 @@ const videoTrendOption = computed<EChartsOption>(() => {
     series: [
       {
         name: '视频上传数',
-        type: 'line',
-        smooth: true,
+        type: 'bar',
         data: counts,
         itemStyle: { color: '#67c23a' },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
-              { offset: 1, color: 'rgba(103, 194, 58, 0.1)' }
-            ]
-          }
-        }
       }
     ]
   }
@@ -436,19 +441,14 @@ const videoTrendOption = computed<EChartsOption>(() => {
 
 // 审核通过率趋势
 const approvalTrendOption = computed<EChartsOption>(() => {
-  const dates = []
-  const rates = []
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    dates.push(date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }))
-    rates.push(Math.floor(Math.random() * 20) + 70)
-  }
+  // 后端当前未提供 7 日趋势，先用“今日新增直播”作为真实数据占位，避免假数据
+  const dates = ['今日']
+  const rates = [dashboard.value?.today?.newLives ?? 0]
   
   return {
     tooltip: {
       trigger: 'axis',
-      formatter: '{b}: {c}%'
+      formatter: '{b}: {c}'
     },
     grid: {
       left: '3%',
@@ -463,31 +463,16 @@ const approvalTrendOption = computed<EChartsOption>(() => {
     },
     yAxis: {
       type: 'value',
-      max: 100,
       axisLabel: {
-        formatter: '{value}%'
+        formatter: '{value}'
       }
     },
     series: [
       {
-        name: '通过率',
-        type: 'line',
-        smooth: true,
+        name: '新增直播',
+        type: 'bar',
         data: rates,
         itemStyle: { color: '#67c23a' },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
-              { offset: 1, color: 'rgba(103, 194, 58, 0.1)' }
-            ]
-          }
-        }
       }
     ]
   }
@@ -499,11 +484,18 @@ onMounted(async () => {
 
 const loadData = async () => {
   try {
+    // 真实概览数据：由后端汇总，学院管理员会按本学院 scope 返回
+    const req = await PlatformApiFp(apiConfig).apiPlatformDashboardGet()
+    const res = await req()
+    dashboard.value = (res as any)?.data?.data || null
+
+    // 下面三个列表仍用于“已上架视频监控 / 直播概览 / 最近审核记录”，后续可继续换成专用接口
     videos.value = await videoApi.getVideos()
     lives.value = await liveApi.getLives()
     auditLogs.value = await auditApi.getAuditLogs()
   } catch (error) {
     console.error('加载数据失败', error)
+    ElMessage.error('加载数据概览失败')
   }
 }
 
@@ -537,7 +529,7 @@ const handleReview = (item: any) => {
   }
 }
 
-const handleViewVideo = (video: Video) => {
+const handleViewVideo = (_video: Video) => {
   router.push(`/college-admin/videos/manage`)
 }
 

@@ -101,7 +101,7 @@
     </el-card>
     
     <!-- 视频详情对话框 -->
-    <VideoPreviewDialog v-model="detailDialogVisible" :video="currentVideo" />
+    <VideoPreviewDialog v-model="detailDialogVisible" :video="currentVideo" :isMine="true" />
   </div>
 </template>
 

@@ -169,6 +169,11 @@ import { apiConfig } from '@/apiClient'
 const props = defineProps<{
   modelValue: boolean
   video: any | null
+  /**
+   * 是否为“我的视频”场景：true 时使用 /api/videos/mine/{id}/media-urls
+   * false/不传时使用公开接口 /api/videos/{id}/media-urls
+   */
+  isMine?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -201,7 +206,9 @@ const loadMediaUrls = async (id: number) => {
   mediaLoading.value = true
   mediaLoadError.value = ''
   try {
-    const req = await VideosApiFp(apiConfig).apiVideosIdMediaUrlsGet(String(id))
+    const req = props.isMine
+      ? await VideosApiFp(apiConfig).apiVideosMineIdMediaUrlsGet(String(id))
+      : await VideosApiFp(apiConfig).apiVideosIdMediaUrlsGet(String(id))
     const res = await req()
     const data: any = res.data.data || {}
     // 返回结构未强类型化，这里做多字段兼容

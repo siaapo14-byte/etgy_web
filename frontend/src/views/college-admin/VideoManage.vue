@@ -8,9 +8,9 @@
       <el-form :inline="true" :model="filters">
         <el-form-item label="状态">
           <el-select v-model="filters.status" placeholder="全部" clearable style="width: 150px">
-            <el-option label="审核通过" value="approved" />
-            <el-option label="已上架" value="published" />
-            <el-option label="已下架" value="offline" />
+            <el-option label="已通过" value="APPROVED" />
+            <el-option label="已上架" value="PUBLISHED" />
+            <el-option label="已下架" value="OFFLINE" />
           </el-select>
         </el-form-item>
         <el-form-item label="志愿者">
@@ -28,19 +28,22 @@
           @mouseenter="startHover(video.id)"
           @mouseleave="stopHover(video.id)"
         >
-          <!-- 显示封面或视频 -->
-          <img 
-            v-if="video.coverUrl"
-            :src="video.coverUrl" 
-            alt="视频封面"
-            style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; background: #f0f0f0;"
-          />
+          <!-- 始终渲染 video 用于悬停预览；封面作为覆盖层，播放时自动隐藏 -->
           <video
-            v-else
             :src="video.videoUrl"
             :controls="false"
-            ref="videoRefs[video.id]"
+            muted
+            playsinline
+            preload="metadata"
+            :ref="(el) => setVideoRef(video.id, el)"
             style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;"
+          />
+          <img
+            v-if="video.coverUrl"
+            v-show="!playingIdMap[video.id]"
+            :src="video.coverUrl"
+            alt="视频封面"
+            class="thumb-cover"
           />
           <div class="video-overlay">
             <div class="dots-menu" @click.stop="openMenu(video)">
@@ -90,7 +93,7 @@
     </el-dialog>
     
     <!-- 视频预览对话框 -->
-    <VideoPreviewDialog v-model="previewDialogVisible" :video="currentPreviewVideo" />
+    <VideoPreviewDialog v-model="previewDialogVisible" :video="currentPreviewVideo" :isMine="false" />
   </div>
 </template>
 
@@ -100,6 +103,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { videoApi } from '@/utils/api'
 import type { Video } from '@/utils/mockData'
 import VideoPreviewDialog from '@/components/VideoPreviewDialog.vue'
+import { VideosApiFp } from '@/api-services/apis/videos-api'
+import type { Video as ApiVideo } from '@/api-services/models'
+import { apiConfig } from '@/apiClient'
+import { useUserStore } from '@/stores/user'
 
 // 状态定义
 const videos = ref<Video[]>([]) // 存储所有视频（或当前页视频）
@@ -110,11 +117,15 @@ const menuX = ref(0)
 const menuY = ref(0)
 const videoRefs = reactive<Record<number, HTMLVideoElement | null>>({})
 const hoverTimers = reactive<Record<number, any>>({})
+const playingIdMap = reactive<Record<number, boolean>>({})
+const currentPlayingId = ref<number | null>(null)
 
 const filters = reactive({
-  status: '',
+  status: 'PUBLISHED',
   volunteer: ''
 })
+
+const userStore = useUserStore()
 
 const offlineDialogVisible = ref(false)
 const previewDialogVisible = ref(false)
@@ -128,9 +139,55 @@ const offlineForm = reactive({
 const loadVideos = async () => {
   loadingMore.value = true
   try {
-    // 这里暂时使用原有的API一次性获取所有视频
-    // 实际无限滚动场景建议改为分页API: getVideos(page, pageSize)
-    const allVideos = await videoApi.getVideos()
+    // 学院管理员端：视频状态管理应展示“本学院已上架视频”，按 /api/videos 拉取后按 collegeId 过滤
+    const status = filters.status ? String(filters.status).toUpperCase() : 'PUBLISHED'
+    const myCollegeId = userStore.user?.collegeId
+    const req = await VideosApiFp(apiConfig).apiVideosGet(
+      status,
+      typeof myCollegeId === 'number' ? String(myCollegeId) : undefined,
+      undefined,
+      undefined,
+      filters.volunteer || undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    )
+    const res = await req()
+    const data: any = (res as any)?.data?.data
+    const listRaw = Array.isArray(data) ? data : (data?.list ?? data?.records ?? data?.items ?? [])
+    const list: ApiVideo[] = (Array.isArray(listRaw) ? listRaw : []) as any
+
+    const listInMyCollege = typeof myCollegeId === 'number'
+      ? list.filter((v: any) => Number(v.collegeId ?? (v.college as any)?.id) === myCollegeId)
+      : list
+
+    const allVideos: Video[] = listInMyCollege.map((v: any) => ({
+      id: v.id,
+      title: v.title,
+      description: v.intro || '',
+      coverUrl: v.coverUrl || '',
+      videoUrl: v.url,
+      duration: v.duration || 0,
+      grade: v.gradeRange ? String(v.gradeRange).split(',').map((i: string) => i.trim()).filter(Boolean) : [],
+      subject: v.subjectTag || '',
+      tags: [],
+    // 统一用大写枚举，方便筛选与展示
+    status: String(v.status || '').toUpperCase() as any,
+      volunteerId: v.uploaderId,
+      volunteerName: v.uploaderName || (v.uploader as any)?.name || '',
+      collegeId: v.collegeId,
+      collegeName: v.collegeName || (v.college as any)?.name || '',
+      playCount: v.metrics?.playCount ?? 0,
+      likeCount: v.metrics?.likeCount ?? 0,
+      collectCount: v.metrics?.favCount ?? 0,
+      createdAt: v.createdAt ? new Date(v.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: v.updatedAt ? new Date(v.updatedAt).toISOString() : (v.createdAt ? new Date(v.createdAt).toISOString() : new Date().toISOString()),
+      reviewReason: v.rejectReason || undefined,
+      reviewTime: v.reviewedAt ? new Date(v.reviewedAt).toISOString() : undefined,
+      reviewerName: v.reviewerName || ''
+    } as any))
     
     // 简单模拟分页追加效果（如果已经是全部数据则直接赋值）
     if (videos.value.length === 0) {
@@ -158,12 +215,10 @@ function handleScroll(e: Event) {
 
 // 过滤计算属性
 const filteredVideos = computed(() => {
-  let result = videos.value.filter(v => 
-    v.status === 'approved' || v.status === 'published' || v.status === 'offline'
-  )
+  let result = videos.value
   
   if (filters.status) {
-    result = result.filter(v => v.status === filters.status)
+    result = result.filter(v => String(v.status || '').toUpperCase() === String(filters.status).toUpperCase())
   }
   
   if (filters.volunteer) {
@@ -176,10 +231,35 @@ const filteredVideos = computed(() => {
 })
 
 // 悬停播放逻辑
+function setVideoRef(id: number, el: HTMLVideoElement | null) {
+  videoRefs[id] = el
+}
+
 function startHover(id: number) {
+  // 若已有其它视频在预览，先停止，避免同时播放
+  if (currentPlayingId.value !== null && currentPlayingId.value !== id) {
+    stopHover(currentPlayingId.value)
+  }
+
   hoverTimers[id] = setTimeout(() => {
     const v = videoRefs[id]
-    if (v) v.play()
+    if (v) {
+      try {
+        playingIdMap[id] = true
+        currentPlayingId.value = id
+        // 避免浏览器对自动播放的限制：muted + playsinline
+        v.muted = true
+        const p = v.play()
+        if (p && typeof (p as any).catch === 'function') {
+          ;(p as any).catch(() => {
+            // 自动播放可能被阻止，保持封面不隐藏
+            playingIdMap[id] = false
+          })
+        }
+      } catch {
+        playingIdMap[id] = false
+      }
+    }
   }, 1000)
 }
 
@@ -190,6 +270,8 @@ function stopHover(id: number) {
     v.pause()
     v.currentTime = 0 // 重置播放进度
   }
+  playingIdMap[id] = false
+  if (currentPlayingId.value === id) currentPlayingId.value = null
 }
 
 // 菜单逻辑
@@ -207,26 +289,13 @@ function openMenu(video: any) {
 }
 
 // 工具函数
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = {
-    approved: 'success',
-    published: 'success',
-    offline: 'info'
-  }
-  return map[status] || 'info'
-}
-
 const getStatusText = (status: string) => {
   const map: Record<string, string> = {
-    approved: '审核通过',
-    published: '已上架',
-    offline: '已下架'
+    APPROVED: '审核通过',
+    PUBLISHED: '已上架',
+    OFFLINE: '已下架'
   }
   return map[status] || status
-}
-
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleString('zh-CN')
 }
 
 // 事件处理
@@ -236,8 +305,9 @@ const handleSearch = () => {
 }
 
 const handleReset = () => {
-  filters.status = ''
+  filters.status = 'PUBLISHED'
   filters.volunteer = ''
+  loadVideos()
 }
 
 const handlePublish = async (video: Video) => {
@@ -316,6 +386,16 @@ onMounted(() => {
     overflow: hidden;
     border-radius: 8px;
     background: #000;
+  }
+  .thumb-cover {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    background: #f0f0f0;
   }
   .video-overlay {
     position: absolute;

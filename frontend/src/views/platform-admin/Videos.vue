@@ -19,12 +19,11 @@
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="filters.status" placeholder="全部" clearable style="width: 150px">
-              <el-option label="草稿" value="draft" />
-              <el-option label="审核中" value="reviewing" />
-              <el-option label="审核通过" value="approved" />
-              <el-option label="审核驳回" value="rejected" />
-              <el-option label="已上架" value="published" />
-              <el-option label="已下架" value="offline" />
+              <el-option label="待审核" value="REVIEW" />
+              <el-option label="已通过" value="APPROVED" />
+              <el-option label="已驳回" value="REJECTED" />
+              <el-option label="已上架" value="PUBLISHED" />
+              <el-option label="已下架" value="OFFLINE" />
             </el-select>
           </el-form-item>
           <el-form-item label="搜索">
@@ -100,7 +99,7 @@
     </el-dialog>
     
     <!-- 视频预览对话框 -->
-    <VideoPreviewDialog v-model="previewDialogVisible" :video="currentPreviewVideo" />
+    <VideoPreviewDialog v-model="previewDialogVisible" :video="currentPreviewVideo" :isMine="false" />
   </div>
 </template>
 
@@ -109,6 +108,9 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { videoApi, collegeApi } from '@/utils/api'
 import type { Video, College } from '@/utils/mockData'
+import { VideosApiFp } from '@/api-services/apis/videos-api'
+import type { Video as ApiVideo } from '@/api-services/models'
+import { apiConfig } from '@/apiClient'
 import VideoPreviewDialog from '@/components/VideoPreviewDialog.vue'
 
 const videos = ref<Video[]>([])
@@ -125,27 +127,7 @@ const offlineForm = reactive({
   reason: ''
 })
 
-const filteredVideos = computed(() => {
-  let result = videos.value
-  
-  if (filters.collegeId) {
-    result = result.filter(v => v.collegeId === filters.collegeId)
-  }
-  
-  if (filters.status) {
-    result = result.filter(v => v.status === filters.status)
-  }
-  
-  if (filters.keyword) {
-    const keyword = filters.keyword.toLowerCase()
-    result = result.filter(v => 
-      v.title.toLowerCase().includes(keyword) ||
-      v.volunteerName.toLowerCase().includes(keyword)
-    )
-  }
-  
-  return result
-})
+const filteredVideos = computed(() => videos.value)
 
 onMounted(async () => {
   await loadData()
@@ -153,7 +135,47 @@ onMounted(async () => {
 
 const loadData = async () => {
   try {
-    videos.value = await videoApi.getVideos()
+    // 管理端视频列表必须使用 /api/videos/admin（可跨学院筛选）
+    const status = filters.status ? String(filters.status).toUpperCase() : undefined
+    const req = await VideosApiFp(apiConfig).apiVideosAdminGet(
+      status,
+      filters.collegeId ?? undefined,
+      undefined,
+      filters.keyword || undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    )
+    const res = await req()
+    const data: any = (res as any)?.data?.data
+    const listRaw = Array.isArray(data) ? data : (data?.list ?? data?.records ?? data?.items ?? [])
+    const list: ApiVideo[] = (Array.isArray(listRaw) ? listRaw : []) as any
+    videos.value = list.map((v: any) => ({
+      id: v.id,
+      title: v.title,
+      description: v.intro || '',
+      coverUrl: v.coverUrl || '',
+      videoUrl: v.url,
+      duration: v.duration || 0,
+      grade: v.gradeRange ? String(v.gradeRange).split(',').map((i: string) => i.trim()).filter(Boolean) : [],
+      subject: v.subjectTag || '',
+      tags: [],
+      status: (String(v.status || '').toLowerCase() as any),
+      volunteerId: v.uploaderId,
+      volunteerName: v.uploaderName || (v.uploader as any)?.name || '',
+      collegeId: v.collegeId,
+      collegeName: v.collegeName || (v.college as any)?.name || '',
+      playCount: v.metrics?.playCount ?? 0,
+      likeCount: v.metrics?.likeCount ?? 0,
+      collectCount: v.metrics?.favCount ?? 0,
+      createdAt: v.createdAt ? new Date(v.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: v.updatedAt ? new Date(v.updatedAt).toISOString() : (v.createdAt ? new Date(v.createdAt).toISOString() : new Date().toISOString()),
+      reviewReason: v.rejectReason || undefined,
+      reviewTime: v.reviewedAt ? new Date(v.reviewedAt).toISOString() : undefined,
+      reviewerName: v.reviewerName || ''
+    } as any))
     colleges.value = await collegeApi.getColleges()
   } catch (error: any) {
     ElMessage.error(error.message || '加载数据失败')
@@ -161,27 +183,28 @@ const loadData = async () => {
 }
 
 const getStatusType = (status: string) => {
+  const s = String(status || '').toLowerCase()
   const map: Record<string, string> = {
-    draft: 'info',
     reviewing: 'warning',
     approved: 'success',
     rejected: 'danger',
     published: 'success',
     offline: 'info'
   }
-  return map[status] || 'info'
+  return map[s] || 'info'
 }
 
 const getStatusText = (status: string) => {
+  const s = String(status || '').toLowerCase()
   const map: Record<string, string> = {
     draft: '草稿',
-    reviewing: '审核中',
-    approved: '审核通过',
-    rejected: '审核驳回',
+    reviewing: '待审核',
+    approved: '已通过',
+    rejected: '已驳回',
     published: '已上架',
     offline: '已下架'
   }
-  return map[status] || status
+  return map[s] || status
 }
 
 const formatDate = (dateStr: string) => {
@@ -189,13 +212,14 @@ const formatDate = (dateStr: string) => {
 }
 
 const handleSearch = () => {
-  // 搜索逻辑已在computed中实现
+  loadData()
 }
 
 const handleReset = () => {
   filters.collegeId = null
   filters.status = ''
   filters.keyword = ''
+  loadData()
 }
 
 const handleOffline = (video: Video) => {

@@ -9,9 +9,9 @@
         <el-form :inline="true" :model="filters">
           <el-form-item label="状态">
             <el-select v-model="filters.status" placeholder="全部" clearable style="width: 150px">
-              <el-option label="待审核" value="reviewing" />
-              <el-option label="已通过" value="approved" />
-              <el-option label="已驳回" value="rejected" />
+              <el-option label="待审核" value="REVIEW" />
+              <el-option label="已通过" value="APPROVED" />
+              <el-option label="已驳回" value="REJECTED" />
             </el-select>
           </el-form-item>
           <el-form-item label="志愿者">
@@ -96,7 +96,7 @@
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button
-              v-if="row.status === 'reviewing' && !row.reviewerName"
+              v-if="String(row.status || '').toUpperCase() === 'REVIEW' && !row.reviewerName"
               type="success"
               size="small"
               @click="handleApprove(row)"
@@ -104,7 +104,7 @@
               通过
             </el-button>
             <el-button
-              v-if="row.status === 'reviewing' && !row.reviewerName"
+              v-if="String(row.status || '').toUpperCase() === 'REVIEW' && !row.reviewerName"
               type="danger"
               size="small"
               @click="handleReject(row)"
@@ -112,7 +112,7 @@
               驳回
             </el-button>
             <el-button
-              v-if="row.status === 'reviewing' && row.reviewerName"
+              v-if="String(row.status || '').toUpperCase() === 'REVIEW' && row.reviewerName"
               type="info"
               size="small"
               disabled
@@ -154,19 +154,41 @@
     </el-dialog>
     
     <!-- 视频预览对话框 -->
-    <VideoPreviewDialog v-model="previewDialogVisible" :video="currentPreviewVideo" />
+    <VideoPreviewDialog v-model="previewDialogVisible" :video="currentPreviewVideo" :isMine="false" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { videoApi, reviewApi } from '@/utils/api'
-import type { Video } from '@/utils/mockData'
+import { reviewApi } from '@/utils/api'
+import { VideosApiFp } from '@/api-services/apis/videos-api'
+import type { Video as ApiVideo, VideoStatusEnum } from '@/api-services/models'
+import { apiConfig } from '@/apiClient'
 import VideoPreviewDialog from '@/components/VideoPreviewDialog.vue'
 
-const videos = ref<Video[]>([])
-const selectedVideos = ref<Video[]>([])
+type UiVideo = {
+  id: number
+  title: string
+  description: string
+  videoUrl: string
+  coverUrl?: string | null
+  grade: string[]
+  subject: string
+  status: VideoStatusEnum | string
+  volunteerName: string
+  collegeName?: string
+  playCount: number
+  likeCount: number
+  collectCount: number
+  createdAt: string
+  reviewTime?: string
+  reviewerName?: string
+  reviewReason?: string
+}
+
+const videos = ref<UiVideo[]>([])
+const selectedVideos = ref<UiVideo[]>([])
 const filters = reactive({
   status: '',
   volunteer: '',
@@ -175,7 +197,8 @@ const filters = reactive({
 })
 
 const rejectDialogVisible = ref(false)
-const currentRejectVideo = ref<Video | null>(null)
+const currentRejectVideo = ref<UiVideo | null>(null)
+const rejectMode = ref<'single' | 'batch'>('single')
 const rejectForm = reactive({
   reason: ''
 })
@@ -184,7 +207,7 @@ const filteredVideos = computed(() => {
   let result = videos.value
   
   if (filters.status) {
-    result = result.filter(v => v.status === filters.status)
+    result = result.filter(v => String(v.status || '').toUpperCase() === String(filters.status).toUpperCase())
   }
   
   if (filters.volunteer) {
@@ -204,12 +227,12 @@ const filteredVideos = computed(() => {
   return result
 })
 
-const checkSelectable = (row: Video) => {
+const checkSelectable = (row: UiVideo) => {
   // 只能选择待审核且未被其他管理员审核的视频
-  return row.status === 'reviewing' && !row.reviewerName
+  return String(row.status || '').toUpperCase() === 'REVIEW' && !row.reviewerName
 }
 
-const handleSelectionChange = (selection: Video[]) => {
+const handleSelectionChange = (selection: UiVideo[]) => {
   selectedVideos.value = selection
 }
 
@@ -219,31 +242,81 @@ onMounted(async () => {
 
 const loadVideos = async () => {
   try {
-    videos.value = await videoApi.getVideos()
+    // 后端新版本使用大写枚举：REVIEW/APPROVED/REJECTED...
+    // 审核页默认只看待审核（REVIEW），并支持切换到 APPROVED/REJECTED
+    const status = filters.status ? String(filters.status).toUpperCase() : 'REVIEW'
+    // 管理端列表：必须使用 /api/videos/admin（需要 token），否则会拿到游客/公开列表或直接 401
+    const req = await VideosApiFp(apiConfig).apiVideosAdminGet(
+      status as any,
+      undefined, // collegeId: 学院管理员后端会自动限定本学院；平台管理员才需要跨学院筛选
+      undefined, // uploaderId
+      filters.volunteer || undefined, // search
+      filters.grade || undefined,
+      filters.subject || undefined,
+      undefined, // sort
+      undefined, // page
+      undefined // pageSize
+    )
+    const res = await req()
+    const data: any = (res as any)?.data?.data
+    // 兼容多种后端返回结构：
+    // - 直接数组：data = []
+    // - 分页对象：data = { list: [], total: ... } / { records: [] } / { items: [] }
+    const listRaw = Array.isArray(data)
+      ? data
+      : (data?.list ?? data?.records ?? data?.items ?? [])
+    const list: ApiVideo[] = (Array.isArray(listRaw) ? listRaw : []) as any
+
+    if (!Array.isArray(listRaw)) {
+      // 不要阻塞 UI，但给开发排查线索
+      console.warn('[VideoReview] /api/videos/admin 返回 data 不是数组，已降级为空数组：', data)
+    }
+
+    videos.value = list.map((v: any) => ({
+      id: v.id,
+      title: v.title,
+      description: v.intro || '',
+      videoUrl: v.url,
+      coverUrl: v.coverUrl,
+      grade: v.gradeRange ? String(v.gradeRange).split(',').map((i: string) => i.trim()).filter(Boolean) : [],
+      subject: v.subjectTag || '',
+      status: v.status,
+      volunteerName: v.uploaderName || v.volunteerName || '',
+      collegeName: v.collegeName || '',
+      playCount: v.metrics?.playCount ?? 0,
+      likeCount: v.metrics?.likeCount ?? 0,
+      collectCount: v.metrics?.favCount ?? 0,
+      createdAt: v.createdAt ? new Date(v.createdAt).toISOString() : new Date().toISOString(),
+      reviewTime: v.reviewedAt ? new Date(v.reviewedAt).toISOString() : undefined,
+      reviewerName: v.reviewerName || '',
+      reviewReason: v.rejectReason || ''
+    }))
   } catch (error: any) {
     ElMessage.error(error.message || '加载视频列表失败')
   }
 }
 
 const getStatusType = (status: string) => {
+  const s = String(status || '').toUpperCase()
   const map: Record<string, string> = {
-    reviewing: 'warning',
-    approved: 'success',
-    rejected: 'danger'
+    REVIEW: 'warning',
+    APPROVED: 'success',
+    REJECTED: 'danger'
   }
-  return map[status] || 'info'
+  return map[s] || 'info'
 }
 
 const getStatusText = (status: string) => {
+  const s = String(status || '').toUpperCase()
   const map: Record<string, string> = {
-    draft: '草稿',
-    reviewing: '待审核',
-    approved: '已通过',
-    rejected: '已驳回',
-    published: '已上架',
-    offline: '已下架'
+    DRAFT: '草稿',
+    REVIEW: '待审核',
+    APPROVED: '已通过',
+    REJECTED: '已驳回',
+    PUBLISHED: '已上架',
+    OFFLINE: '已下架'
   }
-  return map[status] || status
+  return map[s] || status
 }
 
 const formatDate = (dateStr: string) => {
@@ -251,7 +324,8 @@ const formatDate = (dateStr: string) => {
 }
 
 const handleSearch = () => {
-  // 搜索逻辑已在computed中实现
+  // 本页后端目前只支持按 status 拉取；其它筛选在前端 computed 里做
+  loadVideos()
 }
 
 const handleReset = () => {
@@ -259,6 +333,7 @@ const handleReset = () => {
   filters.volunteer = ''
   filters.grade = ''
   filters.subject = ''
+  loadVideos()
 }
 
 const handleBatchApprove = async () => {
@@ -294,7 +369,7 @@ const handleBatchReject = () => {
     ElMessage.warning('请选择要审核的视频')
     return
   }
-  
+  rejectMode.value = 'batch'
   rejectDialogVisible.value = true
   // 批量驳回时，reason会在confirmReject中应用到所有选中项
 }
@@ -320,7 +395,7 @@ const confirmBatchReject = async () => {
   }
 }
 
-const handleApprove = async (video: Video) => {
+const handleApprove = async (video: UiVideo) => {
   try {
     await ElMessageBox.confirm('确定要通过这个视频吗？', '提示', {
       type: 'warning'
@@ -335,8 +410,9 @@ const handleApprove = async (video: Video) => {
   }
 }
 
-const handleReject = (video: Video) => {
+const handleReject = (video: UiVideo) => {
   currentRejectVideo.value = video
+  rejectMode.value = 'single'
   selectedVideos.value = [] // 清空批量选择
   rejectForm.reason = ''
   rejectDialogVisible.value = true
@@ -347,9 +423,9 @@ const confirmReject = async () => {
     ElMessage.warning('请输入驳回理由')
     return
   }
-  
-  // 如果是批量驳回
-  if (selectedVideos.value.length > 0) {
+
+  // 批量驳回
+  if (rejectMode.value === 'batch') {
     await confirmBatchReject()
     return
   }
@@ -369,14 +445,14 @@ const confirmReject = async () => {
   }
 }
 
-const handlePreview = (video: Video) => {
+const handlePreview = (video: UiVideo) => {
   // 打开预览对话框
   previewDialogVisible.value = true
   currentPreviewVideo.value = video
 }
 
 const previewDialogVisible = ref(false)
-const currentPreviewVideo = ref<Video | null>(null)
+const currentPreviewVideo = ref<UiVideo | null>(null)
 </script>
 
 <style scoped lang="scss">

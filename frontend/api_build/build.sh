@@ -4,7 +4,7 @@ dir="$(dirname "$0")"
 
 moduleName="apiServices"
 apiServicesPath="$dir/../src/api-services/"
-apiUrl="http://8.148.215.20/api/docs.json"
+apiUrl="http://8.166.115.78/api/docs.json"
 
 # moduleName=apiJyServices
 # apiServicesPath="$dir/../src/api-plugins/jyServices/"
@@ -14,17 +14,17 @@ case "$1" in
     approvalFlow)
         moduleName="approvalFlow"
         apiServicesPath="$dir/../src/api-plugins/approvalFlow/"
-        apiUrl="http://8.148.215.20/api/docs.json"
+        apiUrl="http://8.166.115.78/api/docs.json"
         ;;
     dingTalk)
         moduleName="dingTalk"
         apiServicesPath="$dir/../src/api-plugins/dingTalk/"
-        apiUrl="http://8.148.215.20/api/docs.json"
+        apiUrl="http://8.166.115.78/api/docs.json"
         ;;
     goView)
         moduleName="goView"
         apiServicesPath="$dir/../src/api-plugins/goView/"
-        apiUrl="http://8.148.215.20/api/docs.json"
+        apiUrl="http://8.166.115.78/api/docs.json"
         ;;
 esac
 

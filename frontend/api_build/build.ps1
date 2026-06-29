@@ -7,7 +7,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # 设置默认参数
 $moduleName = "apiServices"
 $apiServicesPath = Join-Path (Join-Path $scriptDir "..") "src\api-services\"
-$apiUrl = "http://8.148.215.20/api/docs.json"
+$apiUrl = "http://8.166.115.78/api/docs.json"
 
 # 可通过环境变量覆盖默认 swagger 地址（CI/不同后端环境更方便）
 # PowerShell 用法示例：
