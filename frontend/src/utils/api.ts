@@ -343,9 +343,19 @@ export const liveApi = {
   },
 
   getLiveById: async (id: number): Promise<Live> => {
-    const req = await LiveApiFp(apiConfig).apiLiveIdGet(String(id))
+    const token =
+      typeof apiConfig.accessToken === 'function'
+        ? await apiConfig.accessToken()
+        : (apiConfig.accessToken as string) || ''
+    const req = await LiveApiFp(apiConfig).apiLiveIdGet(String(id), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
     const res = await req()
-    return adaptLive(res.data.data as ApiLiveRoom)
+    const payload = (res as any)?.data?.data ?? (res as any)?.data
+    if (!payload?.id) {
+      throw new Error('直播详情返回为空')
+    }
+    return adaptLive(payload as ApiLiveRoom)
   },
 
   getAgoraRtcToken: async (id: number) => {

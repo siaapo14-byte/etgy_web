@@ -32,15 +32,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAgoraBroadcaster } from '@/composables/useAgoraBroadcaster'
 import { getApiErrorMessage, liveApi } from '@/utils/api'
+import type { Live } from '@/utils/mockData'
 
 const route = useRoute()
 const router = useRouter()
 const liveId = computed(() => Number(route.params.id))
+const routeLive = (history.state?.live as Live | undefined) ?? undefined
 
 const localVideoRef = ref<HTMLDivElement>()
 const liveTitle = ref('')
@@ -58,19 +60,29 @@ const startBroadcast = async () => {
   if (!localVideoRef.value) return
 
   try {
-    const detail = await liveApi.getLiveById(liveId.value)
-    liveTitle.value = detail.title
-
-    if (detail.status === 'ended' || detail.status === 'offline') {
-      throw new Error('直播已结束或已下架')
+    let detail: Live | null = routeLive?.id === liveId.value ? routeLive : null
+    if (!detail) {
+      try {
+        detail = await liveApi.getLiveById(liveId.value)
+      } catch (error: unknown) {
+        // 详情接口失败时仍尝试推流（start 已在列表页触发时尤其常见）
+        console.warn('getLiveById failed, continue with rtc-token', error)
+      }
     }
 
-    if (!['published', 'live'].includes(detail.status)) {
-      throw new Error(`当前状态不可推流（${getStatusText(detail.status)}）`)
-    }
-
-    if (detail.status === 'published') {
-      await liveApi.startLive(liveId.value)
+    if (detail) {
+      liveTitle.value = detail.title
+      if (detail.status === 'ended' || detail.status === 'offline') {
+        throw new Error('直播已结束或已下架')
+      }
+      if (!['published', 'live'].includes(detail.status)) {
+        throw new Error(`当前状态不可推流（${getStatusText(detail.status)}）`)
+      }
+      if (detail.status === 'published') {
+        await liveApi.startLive(liveId.value)
+      }
+    } else {
+      liveTitle.value = `直播 #${liveId.value}`
     }
 
     const cred = await liveApi.getAgoraRtcToken(liveId.value)
@@ -135,7 +147,7 @@ const handleFinish = async () => {
 }
 
 onMounted(() => {
-  void startBroadcast()
+  void nextTick(() => startBroadcast())
 })
 
 onUnmounted(() => {
@@ -169,11 +181,19 @@ onUnmounted(() => {
   }
 
   &__video {
-    flex: 1;
+    position: relative;
+    width: 100%;
+    height: min(72vh, 720px);
     min-height: 480px;
     border-radius: 12px;
     overflow: hidden;
     background: #111;
+
+    :deep(video) {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+    }
   }
 
   &__alert {

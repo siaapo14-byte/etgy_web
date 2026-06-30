@@ -319,14 +319,22 @@ const handlePublish = async (id: number) => {
 }
 
 const enterLiveRoom = (id: number) => {
-  router.push(`/volunteer/live/${id}/room`)
+  const live = lives.value.find((item) => item.id === id)
+  router.push({
+    path: `/volunteer/live/${id}/room`,
+    state: live ? { live } : undefined,
+  })
 }
 
 const handleStartLive = async (id: number) => {
+  const live = lives.value.find((item) => item.id === id)
   try {
     await liveApi.startLive(id)
     ElMessage.success('已开始直播')
-    router.push(`/volunteer/live/${id}/room`)
+    router.push({
+      path: `/volunteer/live/${id}/room`,
+      state: live ? { live: { ...live, status: 'live' as const } } : { live: { id, title: '', status: 'live' } },
+    })
   } catch (error: any) {
     ElMessage.error(error.message || '开始直播失败')
   }
