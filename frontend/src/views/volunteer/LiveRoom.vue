@@ -1,24 +1,88 @@
 <template>
   <div class="live-room">
-    <div class="live-room__header">
-      <div>
-        <h2>{{ liveTitle || '直播间' }}</h2>
-        <p class="live-room__status">{{ statusText }}</p>
+    <div
+      ref="stageRef"
+      class="live-room__stage"
+      :class="{ 'live-room__stage--fullscreen': isFullscreen }"
+    >
+      <div ref="localVideoRef" class="live-room__video" />
+
+      <div v-if="isLoading" class="live-room__loading">
+        <div class="live-room__loading-card">
+          <el-icon class="live-room__loading-icon is-loading">
+            <Loading />
+          </el-icon>
+          <p class="live-room__loading-title">{{ loadingTitle }}</p>
+          <p class="live-room__loading-hint">{{ loadingHint }}</p>
+        </div>
       </div>
-      <div class="live-room__actions">
-        <el-button :disabled="!isPublishing" @click="toggleMic">
-          {{ micEnabled ? '静音' : '开麦' }}
-        </el-button>
-        <el-button :disabled="!isPublishing" @click="toggleCamera">
-          {{ cameraEnabled ? '关摄像头' : '开摄像头' }}
-        </el-button>
-        <el-button type="danger" :loading="finishing" @click="handleFinish">
-          结束直播
-        </el-button>
+
+      <div v-if="isPublishing" class="live-room__overlay">
+        <div class="live-room__top">
+          <div class="live-room__title-wrap">
+            <span class="live-room__badge">LIVE</span>
+            <h2 class="live-room__title">{{ liveTitle || '直播间' }}</h2>
+          </div>
+          <span class="live-room__status">{{ statusText }}</span>
+        </div>
+
+        <div class="live-room__bottom">
+          <el-button
+            circle
+            :type="micEnabled ? 'default' : 'danger'"
+            :disabled="!isPublishing"
+            :title="micEnabled ? '静音' : '开麦'"
+            @click="toggleMic"
+          >
+            <el-icon><Microphone v-if="micEnabled" /><Mute v-else /></el-icon>
+          </el-button>
+          <el-button
+            circle
+            :type="cameraEnabled ? 'default' : 'danger'"
+            :disabled="!isPublishing || isScreenSharing"
+            :title="isScreenSharing ? '屏幕共享中无法切换摄像头' : cameraEnabled ? '关摄像头' : '开摄像头'"
+            @click="toggleCamera"
+          >
+            <el-icon><VideoCamera v-if="cameraEnabled" /><VideoPause v-else /></el-icon>
+          </el-button>
+          <el-button
+            circle
+            :type="isScreenSharing ? 'primary' : 'default'"
+            :disabled="!isPublishing"
+            :loading="screenShareLoading"
+            :title="isScreenSharing ? '结束屏幕共享' : '共享屏幕'"
+            @click="toggleScreenShareAction"
+          >
+            <el-icon><Monitor /></el-icon>
+          </el-button>
+          <el-button
+            circle
+            :type="shareSystemAudioEnabled ? 'primary' : 'default'"
+            :disabled="!isPublishing"
+            :loading="systemAudioLoading"
+            :title="systemAudioButtonTitle"
+            @click="toggleSystemAudioAction"
+          >
+            <el-icon><Headset /></el-icon>
+          </el-button>
+          <el-button
+            circle
+            :title="isFullscreen ? '退出全屏' : '全屏'"
+            @click="toggleFullscreen"
+          >
+            <el-icon><FullScreen v-if="!isFullscreen" /><ScaleToOriginal v-else /></el-icon>
+          </el-button>
+          <el-button
+            type="danger"
+            round
+            :loading="finishing"
+            @click="handleFinish"
+          >
+            结束直播
+          </el-button>
+        </div>
       </div>
     </div>
-
-    <div ref="localVideoRef" class="live-room__video" />
 
     <el-alert
       v-if="errorMessage"
@@ -27,15 +91,34 @@
       show-icon
       :closable="false"
       class="live-room__alert"
-    />
+    >
+      <template #default>
+        <el-button type="primary" link @click="retryBroadcast">重试</el-button>
+      </template>
+    </el-alert>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import {
+  FullScreen,
+  Headset,
+  Loading,
+  Microphone,
+  Monitor,
+  Mute,
+  ScaleToOriginal,
+  VideoCamera,
+  VideoPause,
+} from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useAgoraBroadcaster } from '@/composables/useAgoraBroadcaster'
+import {
+  useAgoraBroadcaster,
+  type BroadcastLoadingStep,
+} from '@/composables/useAgoraBroadcaster'
+import { useFullscreen } from '@/composables/useFullscreen'
 import { getApiErrorMessage, liveApi } from '@/utils/api'
 import type { Live } from '@/utils/mockData'
 
@@ -44,20 +127,87 @@ const router = useRouter()
 const liveId = computed(() => Number(route.params.id))
 const routeLive = (history.state?.live as Live | undefined) ?? undefined
 
+const stageRef = ref<HTMLDivElement>()
 const localVideoRef = ref<HTMLDivElement>()
+const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(stageRef)
+
 const liveTitle = ref('')
 const isPublishing = ref(false)
+const isLoading = ref(true)
+const loadingStep = ref<'init' | BroadcastLoadingStep | 'done'>('init')
 const finishing = ref(false)
 const errorMessage = ref('')
 const micEnabled = ref(true)
 const cameraEnabled = ref(true)
+const screenShareLoading = ref(false)
+const systemAudioLoading = ref(false)
 
-const { joinAsHost, leave, setMicEnabled, setCameraEnabled } = useAgoraBroadcaster()
+const {
+  isScreenSharing,
+  shareSystemAudioEnabled,
+  isSystemAudioActive,
+  joinAsHost,
+  leave,
+  setMicEnabled,
+  setCameraEnabled,
+  toggleScreenShare,
+  toggleSystemAudioSharing,
+} = useAgoraBroadcaster()
 
-const statusText = computed(() => (isPublishing.value ? '推流中' : '正在连接…'))
+const statusText = computed(() => {
+  if (isScreenSharing.value && isSystemAudioActive.value) return '屏幕共享中 · 含系统音频'
+  if (isScreenSharing.value) return '屏幕共享中'
+  if (shareSystemAudioEnabled.value && !isScreenSharing.value) return '推流中 · 下次共享将采集系统音频'
+  return isPublishing.value ? '推流中' : '正在连接…'
+})
+
+const systemAudioButtonTitle = computed(() => {
+  if (!isPublishing.value) return '共享系统音频'
+  if (!isScreenSharing.value) {
+    return shareSystemAudioEnabled.value
+      ? '已开启：下次共享屏幕时将采集系统音频'
+      : '已关闭：下次共享屏幕时不采集系统音频'
+  }
+  if (shareSystemAudioEnabled.value && isSystemAudioActive.value) {
+    return '关闭系统音频（麦克风仍保留）'
+  }
+  if (shareSystemAudioEnabled.value && !isSystemAudioActive.value) {
+    return '开启系统音频（若未采集到将重新弹出共享窗口，请勾选共享音频）'
+  }
+  return '开启系统音频'
+})
+
+const loadingTitle = computed(() => {
+  const map: Record<string, string> = {
+    init: '正在准备直播间',
+    camera: '正在获取摄像头和麦克风',
+    preview: '正在启动本地预览',
+    join: '正在连接直播频道',
+    publish: '正在发布音视频流',
+    done: '连接成功',
+  }
+  return map[loadingStep.value] ?? '正在连接…'
+})
+
+const loadingHint = computed(() => {
+  if (loadingStep.value === 'camera') {
+    return '请在浏览器弹窗中允许使用摄像头和麦克风'
+  }
+  if (loadingStep.value === 'join' || loadingStep.value === 'publish') {
+    return '请保持网络畅通，首次连接可能需要几秒钟'
+  }
+  return '马上就好，请稍候'
+})
 
 const startBroadcast = async () => {
   if (!localVideoRef.value) return
+
+  await leave()
+
+  isLoading.value = true
+  loadingStep.value = 'init'
+  errorMessage.value = ''
+  isPublishing.value = false
 
   try {
     let detail: Live | null = routeLive?.id === liveId.value ? routeLive : null
@@ -65,7 +215,6 @@ const startBroadcast = async () => {
       try {
         detail = await liveApi.getLiveById(liveId.value)
       } catch (error: unknown) {
-        // 详情接口失败时仍尝试推流（start 已在列表页触发时尤其常见）
         console.warn('getLiveById failed, continue with rtc-token', error)
       }
     }
@@ -90,12 +239,23 @@ const startBroadcast = async () => {
       throw new Error('当前账号无推流权限，请使用本场直播的志愿者账号')
     }
 
-    await joinAsHost(cred, localVideoRef.value)
+    await joinAsHost(cred, localVideoRef.value, (step) => {
+      loadingStep.value = step
+    })
+
+    loadingStep.value = 'done'
     isPublishing.value = true
   } catch (error: unknown) {
     errorMessage.value = getApiErrorMessage(error, '进入直播间失败')
     ElMessage.error(errorMessage.value)
+    await leave()
+  } finally {
+    isLoading.value = false
   }
+}
+
+const retryBroadcast = () => {
+  void nextTick(() => startBroadcast())
 }
 
 const getStatusText = (status: string) => {
@@ -118,8 +278,68 @@ const toggleMic = async () => {
 }
 
 const toggleCamera = async () => {
+  if (isScreenSharing.value) return
   cameraEnabled.value = !cameraEnabled.value
   await setCameraEnabled(cameraEnabled.value)
+}
+
+const toggleScreenShareAction = async () => {
+  if (!localVideoRef.value || screenShareLoading.value) return
+
+  screenShareLoading.value = true
+  try {
+    await toggleScreenShare(localVideoRef.value)
+    if (isScreenSharing.value) {
+      if (shareSystemAudioEnabled.value && isSystemAudioActive.value) {
+        ElMessage.success('已开始共享屏幕和系统音频')
+      } else if (shareSystemAudioEnabled.value) {
+        ElMessage.warning('屏幕共享已开始，但未采集到系统音频，请重新共享并勾选“共享音频”')
+      } else {
+        ElMessage.success('已开始共享屏幕，观众将看到你的屏幕内容')
+      }
+    } else {
+      ElMessage.success('已结束屏幕共享，恢复摄像头画面')
+    }
+  } catch (error: unknown) {
+    ElMessage.error(getApiErrorMessage(error, '屏幕共享失败'))
+  } finally {
+    screenShareLoading.value = false
+  }
+}
+
+const toggleSystemAudioAction = async () => {
+  if (!isPublishing.value || systemAudioLoading.value) return
+
+  systemAudioLoading.value = true
+  try {
+    const wasEnabled = shareSystemAudioEnabled.value
+    await toggleSystemAudioSharing(localVideoRef.value)
+
+    if (!isScreenSharing.value) {
+      ElMessage.success(
+        shareSystemAudioEnabled.value
+          ? '已开启：下次共享屏幕时将尝试采集系统音频'
+          : '已关闭：共享屏幕时不再采集系统音频'
+      )
+      return
+    }
+
+    if (shareSystemAudioEnabled.value && isSystemAudioActive.value) {
+      ElMessage.success('系统音频已开启，观众可听到屏幕声音')
+      return
+    }
+
+    if (!wasEnabled && shareSystemAudioEnabled.value && !isSystemAudioActive.value) {
+      ElMessage.warning('未采集到系统音频，请在浏览器弹窗中勾选“共享音频”后重试')
+      return
+    }
+
+    ElMessage.success('系统音频已关闭，麦克风讲解仍保留')
+  } catch (error: unknown) {
+    ElMessage.error(getApiErrorMessage(error, '系统音频切换失败'))
+  } finally {
+    systemAudioLoading.value = false
+  }
 }
 
 const handleFinish = async () => {
@@ -159,45 +379,154 @@ onUnmounted(() => {
 .live-room {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-height: calc(100vh - 120px);
 
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  &__status {
-    margin: 6px 0 0;
-    color: #67c23a;
-  }
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  &__video {
+  &__stage {
     position: relative;
     width: 100%;
-    height: min(72vh, 720px);
+    height: min(78vh, 760px);
     min-height: 480px;
     border-radius: 12px;
     overflow: hidden;
-    background: #111;
+    background: #0a0a0a;
+
+    &--fullscreen {
+      width: 100vw;
+      height: 100vh;
+      min-height: 100vh;
+      border-radius: 0;
+    }
+  }
+
+  &__video {
+    position: absolute;
+    inset: 0;
 
     :deep(video) {
       width: 100% !important;
       height: 100% !important;
-      object-fit: cover;
+      background: #000;
     }
   }
 
-  &__alert {
-    margin-top: 8px;
+  &__loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
   }
+
+  &__loading-card {
+    text-align: center;
+    color: #fff;
+    padding: 24px 32px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &__loading-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+
+  &__loading-title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  &__loading-hint {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      transparent 28%,
+      transparent 72%,
+      rgba(0, 0, 0, 0.65) 100%
+    );
+  }
+
+  &__top,
+  &__bottom {
+    pointer-events: auto;
+  }
+
+  &__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    color: #fff;
+  }
+
+  &__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__badge {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #f56c6c;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__status {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: #95d475;
+  }
+
+  &__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 20px 20px;
+  }
+
+  &__alert {
+    margin-top: 4px;
+  }
+}
+
+:global(:fullscreen) .live-room__stage {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  border-radius: 0;
 }
 </style>
