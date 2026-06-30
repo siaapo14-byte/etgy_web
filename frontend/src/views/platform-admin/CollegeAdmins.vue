@@ -196,7 +196,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
-import { collegeApi, platformPasswordApi } from '@/utils/api'
+import { collegeApi, platformPasswordApi, getApiErrorMessage } from '@/utils/api'
 import { downloadCollegeAdminTemplate } from '@/utils/excelTemplate'
 import type { College } from '@/utils/mockData'
 import { PlatformApiFp } from '@/api-services/apis/platform-api'
@@ -409,7 +409,7 @@ const handleTogglePasswordVisibility = async (admin: Admin) => {
     ;(admin as any).password = pwd || ''
     visiblePasswords.value[id] = true
   } catch (e: any) {
-    ElMessage.error(e?.message || '获取密码失败')
+    ElMessage.error(getApiErrorMessage(e, '获取密码失败'))
   } finally {
     passwordLoading.value[id] = false
   }
