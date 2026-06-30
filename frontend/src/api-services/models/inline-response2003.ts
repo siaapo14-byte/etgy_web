@@ -13,7 +13,7 @@
  */
 
 import { BaseResponse } from './base-response';
-import { VideoComment } from './video-comment';
+import { Video } from './video';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { VideoComment } from './video-comment';
 export interface InlineResponse2003 extends BaseResponse {
 
     /**
-     * @type {Array<VideoComment>}
+     * @type {Array<Video>}
      * @memberof InlineResponse2003
      */
-    data: Array<VideoComment>;
+    data: Array<Video>;
 }

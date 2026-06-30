@@ -19,6 +19,7 @@ import { Configuration } from '../configuration';
 import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } from '../base';
 import { ApiVideosBody } from '../models';
 import { AuditBatchBody } from '../models';
+import { AuditBatchBody1 } from '../models';
 import { BaseResponse } from '../models';
 import { CommentIdAuditBody } from '../models';
 import { ErrorResponse } from '../models';
@@ -26,13 +27,16 @@ import { IdAuditBody } from '../models';
 import { IdCommentsBody } from '../models';
 import { IdOfflineBody } from '../models';
 import { IdWatchBody } from '../models';
-import { InlineResponse2002 } from '../models';
 import { InlineResponse2003 } from '../models';
 import { InlineResponse2004 } from '../models';
 import { InlineResponse2005 } from '../models';
+import { InlineResponse2006 } from '../models';
+import { InlineResponse2007 } from '../models';
+import { InlineResponse2008 } from '../models';
 import { InlineResponse201 } from '../models';
 import { InlineResponse2012 } from '../models';
 import { InlineResponse2013 } from '../models';
+import { Status } from '../models';
 import { VideosIdBody } from '../models';
 /**
  * VideosApi - axios parameter creator
@@ -41,7 +45,7 @@ import { VideosIdBody } from '../models';
 export const VideosApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
-         * 管理端使用：默认返回待审核(REVIEW)视频，可按 status/collegeId/uploaderId/search 等筛选。平台管理员可跨学院查看；学院管理员仅能查看本学院。
+         * 管理端使用：学院管理员默认返回待审核(REVIEW)视频；平台管理员默认返回全量状态视频。可按 status/collegeId/uploaderId/search 等筛选。返回结果会附带 video/cover 的 presigned GET URL（用于列表预览/播放）。
          * @summary 管理端视频列表（学院/平台管理员）
          * @param {string} [status] 
          * @param {number} [collegeId] 
@@ -131,12 +135,133 @@ export const VideosApiAxiosParamCreator = function (configuration?: Configuratio
         /**
          * 
          * @summary 批量审核视频（学院管理员）
+         * @param {AuditBatchBody1} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiVideosAuditBatchPost: async (body?: AuditBatchBody1, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/videos/audit/batch`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            const needsSerialization = (typeof body !== "string") || localVarRequestOptions.headers['Content-Type'] === 'application/json';
+            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(body !== undefined ? body : {}) : (body || "");
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 跨视频聚合的评论审核队列。学院管理员默认仅本学院视频下的评论；平台管理员可全局查看并按 collegeId 筛选。默认 status=PENDING。
+         * @summary 管理端评论审核列表（学院/平台管理员）
+         * @param {string} [status] 默认 PENDING（待审核队列）
+         * @param {number} [collegeId] 平台管理员可按学院筛选
+         * @param {number} [videoId] 
+         * @param {string} [search] 搜索评论内容或视频标题
+         * @param {number} [page] 
+         * @param {number} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiVideosCommentsAdminGet: async (status?: string, collegeId?: number, videoId?: number, search?: string, page?: number, pageSize?: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/videos/comments/admin`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            if (status !== undefined) {
+                localVarQueryParameter['status'] = status;
+            }
+
+            if (collegeId !== undefined) {
+                localVarQueryParameter['collegeId'] = collegeId;
+            }
+
+            if (videoId !== undefined) {
+                localVarQueryParameter['videoId'] = videoId;
+            }
+
+            if (search !== undefined) {
+                localVarQueryParameter['search'] = search;
+            }
+
+            if (page !== undefined) {
+                localVarQueryParameter['page'] = page;
+            }
+
+            if (pageSize !== undefined) {
+                localVarQueryParameter['pageSize'] = pageSize;
+            }
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 批量审核评论（学院/平台管理员）
          * @param {AuditBatchBody} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiVideosAuditBatchPost: async (body?: AuditBatchBody, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/videos/audit/batch`;
+        apiVideosCommentsAuditBatchPost: async (body?: AuditBatchBody, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/videos/comments/audit/batch`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, 'https://example.com');
             let baseOptions;
@@ -998,9 +1123,9 @@ export const VideosApiAxiosParamCreator = function (configuration?: Configuratio
             };
         },
         /**
-         * 
+         * 返回我的视频列表，并将每条视频的 url/coverUrl 自动转换为可播放的 presigned GET URL（便于前端直接预览/播放）。status=ALL 表示不按状态筛选。
          * @summary 志愿者查看我的视频列表（可按状态筛选）
-         * @param {string} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）
+         * @param {Status} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）；传 ALL 表示不按状态筛选
          * @param {string} [search] 按标题/简介模糊搜索（仅我的视频）
          * @param {string} [grade] 
          * @param {string} [subject] 
@@ -1010,7 +1135,7 @@ export const VideosApiAxiosParamCreator = function (configuration?: Configuratio
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiVideosMineGet: async (status?: string, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiVideosMineGet: async (status?: Status, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api/videos/mine`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, 'https://example.com');
@@ -1057,6 +1182,104 @@ export const VideosApiAxiosParamCreator = function (configuration?: Configuratio
 
             if (pageSize !== undefined) {
                 localVarQueryParameter['pageSize'] = pageSize;
+            }
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 仅返回当前登录志愿者自己上传的视频；不会返回他人的视频（即使已发布）。
+         * @summary 志愿者获取我的视频详情（含未发布）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiVideosMineIdGet: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            if (id === null || id === undefined) {
+                throw new RequiredError('id','Required parameter id was null or undefined when calling apiVideosMineIdGet.');
+            }
+            const localVarPath = `/api/videos/mine/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 返回当前登录志愿者自己上传视频的 presigned GET URL（含封面）。不会返回他人的视频。
+         * @summary 志愿者获取我的视频/封面临时访问 URL（仅本人）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiVideosMineIdMediaUrlsGet: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            if (id === null || id === undefined) {
+                throw new RequiredError('id','Required parameter id was null or undefined when calling apiVideosMineIdMediaUrlsGet.');
+            }
+            const localVarPath = `/api/videos/mine/{id}/media-urls`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
             }
 
             const query = new URLSearchParams(localVarUrlObj.search);
@@ -1196,7 +1419,7 @@ export const VideosApiAxiosParamCreator = function (configuration?: Configuratio
 export const VideosApiFp = function(configuration?: Configuration) {
     return {
         /**
-         * 管理端使用：默认返回待审核(REVIEW)视频，可按 status/collegeId/uploaderId/search 等筛选。平台管理员可跨学院查看；学院管理员仅能查看本学院。
+         * 管理端使用：学院管理员默认返回待审核(REVIEW)视频；平台管理员默认返回全量状态视频。可按 status/collegeId/uploaderId/search 等筛选。返回结果会附带 video/cover 的 presigned GET URL（用于列表预览/播放）。
          * @summary 管理端视频列表（学院/平台管理员）
          * @param {string} [status] 
          * @param {number} [collegeId] 
@@ -1210,7 +1433,7 @@ export const VideosApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosAdminGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+        async apiVideosAdminGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2008>>> {
             const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosAdminGet(status, collegeId, uploaderId, search, grade, subject, sort, page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1220,12 +1443,45 @@ export const VideosApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @summary 批量审核视频（学院管理员）
+         * @param {AuditBatchBody1} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosAuditBatchPost(body?: AuditBatchBody1, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+            const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosAuditBatchPost(body, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 跨视频聚合的评论审核队列。学院管理员默认仅本学院视频下的评论；平台管理员可全局查看并按 collegeId 筛选。默认 status=PENDING。
+         * @summary 管理端评论审核列表（学院/平台管理员）
+         * @param {string} [status] 默认 PENDING（待审核队列）
+         * @param {number} [collegeId] 平台管理员可按学院筛选
+         * @param {number} [videoId] 
+         * @param {string} [search] 搜索评论内容或视频标题
+         * @param {number} [page] 
+         * @param {number} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosCommentsAdminGet(status?: string, collegeId?: number, videoId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2005>>> {
+            const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosCommentsAdminGet(status, collegeId, videoId, search, page, pageSize, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 
+         * @summary 批量审核评论（学院/平台管理员）
          * @param {AuditBatchBody} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosAuditBatchPost(body?: AuditBatchBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
-            const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosAuditBatchPost(body, options);
+        async apiVideosCommentsAuditBatchPost(body?: AuditBatchBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+            const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosCommentsAuditBatchPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
@@ -1261,7 +1517,7 @@ export const VideosApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2002>>> {
+        async apiVideosGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2003>>> {
             const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosGet(status, collegeId, uploaderId, search, grade, subject, sort, page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1292,7 +1548,7 @@ export const VideosApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosIdCommentsGet(id: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2003>>> {
+        async apiVideosIdCommentsGet(id: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2004>>> {
             const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosIdCommentsGet(id, page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1450,7 +1706,7 @@ export const VideosApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosIdWatchPost(id: string, body?: IdWatchBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2004>>> {
+        async apiVideosIdWatchPost(id: string, body?: IdWatchBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2006>>> {
             const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosIdWatchPost(id, body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1471,9 +1727,9 @@ export const VideosApiFp = function(configuration?: Configuration) {
             };
         },
         /**
-         * 
+         * 返回我的视频列表，并将每条视频的 url/coverUrl 自动转换为可播放的 presigned GET URL（便于前端直接预览/播放）。status=ALL 表示不按状态筛选。
          * @summary 志愿者查看我的视频列表（可按状态筛选）
-         * @param {string} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）
+         * @param {Status} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）；传 ALL 表示不按状态筛选
          * @param {string} [search] 按标题/简介模糊搜索（仅我的视频）
          * @param {string} [grade] 
          * @param {string} [subject] 
@@ -1483,8 +1739,36 @@ export const VideosApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosMineGet(status?: string, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2002>>> {
+        async apiVideosMineGet(status?: Status, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2003>>> {
             const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosMineGet(status, search, grade, subject, sort, page, pageSize, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 仅返回当前登录志愿者自己上传的视频；不会返回他人的视频（即使已发布）。
+         * @summary 志愿者获取我的视频详情（含未发布）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosMineIdGet(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2012>>> {
+            const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosMineIdGet(id, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 返回当前登录志愿者自己上传视频的 presigned GET URL（含封面）。不会返回他人的视频。
+         * @summary 志愿者获取我的视频/封面临时访问 URL（仅本人）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosMineIdMediaUrlsGet(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+            const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosMineIdMediaUrlsGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
@@ -1514,7 +1798,7 @@ export const VideosApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosWatchLogsGet(videoId?: number, completed?: boolean, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2005>>> {
+        async apiVideosWatchLogsGet(videoId?: number, completed?: boolean, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2007>>> {
             const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosWatchLogsGet(videoId, completed, page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1531,7 +1815,7 @@ export const VideosApiFp = function(configuration?: Configuration) {
 export const VideosApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
     return {
         /**
-         * 管理端使用：默认返回待审核(REVIEW)视频，可按 status/collegeId/uploaderId/search 等筛选。平台管理员可跨学院查看；学院管理员仅能查看本学院。
+         * 管理端使用：学院管理员默认返回待审核(REVIEW)视频；平台管理员默认返回全量状态视频。可按 status/collegeId/uploaderId/search 等筛选。返回结果会附带 video/cover 的 presigned GET URL（用于列表预览/播放）。
          * @summary 管理端视频列表（学院/平台管理员）
          * @param {string} [status] 
          * @param {number} [collegeId] 
@@ -1545,18 +1829,43 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosAdminGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+        async apiVideosAdminGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2008>> {
             return VideosApiFp(configuration).apiVideosAdminGet(status, collegeId, uploaderId, search, grade, subject, sort, page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
          * 
          * @summary 批量审核视频（学院管理员）
+         * @param {AuditBatchBody1} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosAuditBatchPost(body?: AuditBatchBody1, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+            return VideosApiFp(configuration).apiVideosAuditBatchPost(body, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 跨视频聚合的评论审核队列。学院管理员默认仅本学院视频下的评论；平台管理员可全局查看并按 collegeId 筛选。默认 status=PENDING。
+         * @summary 管理端评论审核列表（学院/平台管理员）
+         * @param {string} [status] 默认 PENDING（待审核队列）
+         * @param {number} [collegeId] 平台管理员可按学院筛选
+         * @param {number} [videoId] 
+         * @param {string} [search] 搜索评论内容或视频标题
+         * @param {number} [page] 
+         * @param {number} [pageSize] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosCommentsAdminGet(status?: string, collegeId?: number, videoId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2005>> {
+            return VideosApiFp(configuration).apiVideosCommentsAdminGet(status, collegeId, videoId, search, page, pageSize, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 批量审核评论（学院/平台管理员）
          * @param {AuditBatchBody} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosAuditBatchPost(body?: AuditBatchBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
-            return VideosApiFp(configuration).apiVideosAuditBatchPost(body, options).then((request) => request(axios, basePath));
+        async apiVideosCommentsAuditBatchPost(body?: AuditBatchBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+            return VideosApiFp(configuration).apiVideosCommentsAuditBatchPost(body, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -1584,7 +1893,7 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2002>> {
+        async apiVideosGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2003>> {
             return VideosApiFp(configuration).apiVideosGet(status, collegeId, uploaderId, search, grade, subject, sort, page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1607,7 +1916,7 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosIdCommentsGet(id: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2003>> {
+        async apiVideosIdCommentsGet(id: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2004>> {
             return VideosApiFp(configuration).apiVideosIdCommentsGet(id, page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1721,7 +2030,7 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosIdWatchPost(id: string, body?: IdWatchBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2004>> {
+        async apiVideosIdWatchPost(id: string, body?: IdWatchBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2006>> {
             return VideosApiFp(configuration).apiVideosIdWatchPost(id, body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1734,9 +2043,9 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
             return VideosApiFp(configuration).apiVideosMineDashboardGet(options).then((request) => request(axios, basePath));
         },
         /**
-         * 
+         * 返回我的视频列表，并将每条视频的 url/coverUrl 自动转换为可播放的 presigned GET URL（便于前端直接预览/播放）。status=ALL 表示不按状态筛选。
          * @summary 志愿者查看我的视频列表（可按状态筛选）
-         * @param {string} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）
+         * @param {Status} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）；传 ALL 表示不按状态筛选
          * @param {string} [search] 按标题/简介模糊搜索（仅我的视频）
          * @param {string} [grade] 
          * @param {string} [subject] 
@@ -1746,8 +2055,28 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosMineGet(status?: string, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2002>> {
+        async apiVideosMineGet(status?: Status, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2003>> {
             return VideosApiFp(configuration).apiVideosMineGet(status, search, grade, subject, sort, page, pageSize, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 仅返回当前登录志愿者自己上传的视频；不会返回他人的视频（即使已发布）。
+         * @summary 志愿者获取我的视频详情（含未发布）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosMineIdGet(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2012>> {
+            return VideosApiFp(configuration).apiVideosMineIdGet(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 返回当前登录志愿者自己上传视频的 presigned GET URL（含封面）。不会返回他人的视频。
+         * @summary 志愿者获取我的视频/封面临时访问 URL（仅本人）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosMineIdMediaUrlsGet(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+            return VideosApiFp(configuration).apiVideosMineIdMediaUrlsGet(id, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -1769,7 +2098,7 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiVideosWatchLogsGet(videoId?: number, completed?: boolean, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2005>> {
+        async apiVideosWatchLogsGet(videoId?: number, completed?: boolean, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2007>> {
             return VideosApiFp(configuration).apiVideosWatchLogsGet(videoId, completed, page, pageSize, options).then((request) => request(axios, basePath));
         },
     };
@@ -1783,7 +2112,7 @@ export const VideosApiFactory = function (configuration?: Configuration, basePat
  */
 export class VideosApi extends BaseAPI {
     /**
-     * 管理端使用：默认返回待审核(REVIEW)视频，可按 status/collegeId/uploaderId/search 等筛选。平台管理员可跨学院查看；学院管理员仅能查看本学院。
+     * 管理端使用：学院管理员默认返回待审核(REVIEW)视频；平台管理员默认返回全量状态视频。可按 status/collegeId/uploaderId/search 等筛选。返回结果会附带 video/cover 的 presigned GET URL（用于列表预览/播放）。
      * @summary 管理端视频列表（学院/平台管理员）
      * @param {string} [status] 
      * @param {number} [collegeId] 
@@ -1798,19 +2127,46 @@ export class VideosApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof VideosApi
      */
-    public async apiVideosAdminGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+    public async apiVideosAdminGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2008>> {
         return VideosApiFp(this.configuration).apiVideosAdminGet(status, collegeId, uploaderId, search, grade, subject, sort, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 
      * @summary 批量审核视频（学院管理员）
+     * @param {AuditBatchBody1} [body] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VideosApi
+     */
+    public async apiVideosAuditBatchPost(body?: AuditBatchBody1, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+        return VideosApiFp(this.configuration).apiVideosAuditBatchPost(body, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 跨视频聚合的评论审核队列。学院管理员默认仅本学院视频下的评论；平台管理员可全局查看并按 collegeId 筛选。默认 status=PENDING。
+     * @summary 管理端评论审核列表（学院/平台管理员）
+     * @param {string} [status] 默认 PENDING（待审核队列）
+     * @param {number} [collegeId] 平台管理员可按学院筛选
+     * @param {number} [videoId] 
+     * @param {string} [search] 搜索评论内容或视频标题
+     * @param {number} [page] 
+     * @param {number} [pageSize] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VideosApi
+     */
+    public async apiVideosCommentsAdminGet(status?: string, collegeId?: number, videoId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2005>> {
+        return VideosApiFp(this.configuration).apiVideosCommentsAdminGet(status, collegeId, videoId, search, page, pageSize, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 
+     * @summary 批量审核评论（学院/平台管理员）
      * @param {AuditBatchBody} [body] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof VideosApi
      */
-    public async apiVideosAuditBatchPost(body?: AuditBatchBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
-        return VideosApiFp(this.configuration).apiVideosAuditBatchPost(body, options).then((request) => request(this.axios, this.basePath));
+    public async apiVideosCommentsAuditBatchPost(body?: AuditBatchBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+        return VideosApiFp(this.configuration).apiVideosCommentsAuditBatchPost(body, options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 
@@ -1840,7 +2196,7 @@ export class VideosApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof VideosApi
      */
-    public async apiVideosGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2002>> {
+    public async apiVideosGet(status?: string, collegeId?: number, uploaderId?: number, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2003>> {
         return VideosApiFp(this.configuration).apiVideosGet(status, collegeId, uploaderId, search, grade, subject, sort, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1865,7 +2221,7 @@ export class VideosApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof VideosApi
      */
-    public async apiVideosIdCommentsGet(id: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2003>> {
+    public async apiVideosIdCommentsGet(id: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2004>> {
         return VideosApiFp(this.configuration).apiVideosIdCommentsGet(id, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1990,7 +2346,7 @@ export class VideosApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof VideosApi
      */
-    public async apiVideosIdWatchPost(id: string, body?: IdWatchBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2004>> {
+    public async apiVideosIdWatchPost(id: string, body?: IdWatchBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2006>> {
         return VideosApiFp(this.configuration).apiVideosIdWatchPost(id, body, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -2004,9 +2360,9 @@ export class VideosApi extends BaseAPI {
         return VideosApiFp(this.configuration).apiVideosMineDashboardGet(options).then((request) => request(this.axios, this.basePath));
     }
     /**
-     * 
+     * 返回我的视频列表，并将每条视频的 url/coverUrl 自动转换为可播放的 presigned GET URL（便于前端直接预览/播放）。status=ALL 表示不按状态筛选。
      * @summary 志愿者查看我的视频列表（可按状态筛选）
-     * @param {string} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）
+     * @param {Status} [status] 按视频状态筛选（如 REVIEW/REJECTED/APPROVED/PUBLISHED 等）；传 ALL 表示不按状态筛选
      * @param {string} [search] 按标题/简介模糊搜索（仅我的视频）
      * @param {string} [grade] 
      * @param {string} [subject] 
@@ -2017,8 +2373,30 @@ export class VideosApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof VideosApi
      */
-    public async apiVideosMineGet(status?: string, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2002>> {
+    public async apiVideosMineGet(status?: Status, search?: string, grade?: string, subject?: string, sort?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2003>> {
         return VideosApiFp(this.configuration).apiVideosMineGet(status, search, grade, subject, sort, page, pageSize, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 仅返回当前登录志愿者自己上传的视频；不会返回他人的视频（即使已发布）。
+     * @summary 志愿者获取我的视频详情（含未发布）
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VideosApi
+     */
+    public async apiVideosMineIdGet(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2012>> {
+        return VideosApiFp(this.configuration).apiVideosMineIdGet(id, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 返回当前登录志愿者自己上传视频的 presigned GET URL（含封面）。不会返回他人的视频。
+     * @summary 志愿者获取我的视频/封面临时访问 URL（仅本人）
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VideosApi
+     */
+    public async apiVideosMineIdMediaUrlsGet(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+        return VideosApiFp(this.configuration).apiVideosMineIdMediaUrlsGet(id, options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 
@@ -2042,7 +2420,7 @@ export class VideosApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof VideosApi
      */
-    public async apiVideosWatchLogsGet(videoId?: number, completed?: boolean, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2005>> {
+    public async apiVideosWatchLogsGet(videoId?: number, completed?: boolean, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2007>> {
         return VideosApiFp(this.configuration).apiVideosWatchLogsGet(videoId, completed, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
 }

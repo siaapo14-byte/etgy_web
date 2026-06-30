@@ -35,6 +35,10 @@
             <el-icon><VideoCamera /></el-icon>
             <span>直播审核</span>
           </el-menu-item>
+          <el-menu-item index="/college-admin/comments/review">
+            <el-icon><ChatLineSquare /></el-icon>
+            <span>评论审核</span>
+          </el-menu-item>
           <el-menu-item index="/college-admin/volunteers">
             <el-icon><User /></el-icon>
             <span>志愿者管理</span>

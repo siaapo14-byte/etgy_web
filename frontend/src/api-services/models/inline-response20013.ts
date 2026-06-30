@@ -13,7 +13,7 @@
  */
 
 import { BaseResponse } from './base-response';
-import { InlineResponse20013Data } from './inline-response20013-data';
+import { Dictionaries } from './dictionaries';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { InlineResponse20013Data } from './inline-response20013-data';
 export interface InlineResponse20013 extends BaseResponse {
 
     /**
-     * @type {InlineResponse20013Data}
+     * @type {Dictionaries}
      * @memberof InlineResponse20013
      */
-    data: InlineResponse20013Data;
+    data: Dictionaries;
 }

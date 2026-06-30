@@ -12,6 +12,7 @@
  * Do not edit the class manually.
  */
 
+import { VideoWatchLog } from './video-watch-log';
  /**
  * 
  *
@@ -21,48 +22,26 @@
 export interface InlineResponse2007Data {
 
     /**
-     * @type {string}
+     * @type {number}
      * @memberof InlineResponse2007Data
      */
-    appId: string;
-
-    /**
-     * @type {string}
-     * @memberof InlineResponse2007Data
-     */
-    channelName: string;
+    page: number;
 
     /**
      * @type {number}
      * @memberof InlineResponse2007Data
      */
-    uid: number;
-
-    /**
-     * @type {string}
-     * @memberof InlineResponse2007Data
-     */
-    role: InlineResponse2007DataRoleEnum;
-
-    /**
-     * @type {string}
-     * @memberof InlineResponse2007Data
-     */
-    token: string;
+    pageSize: number;
 
     /**
      * @type {number}
      * @memberof InlineResponse2007Data
      */
-    expireAt: number;
-}
+    total: number;
 
-/**
- * @export
- * @enum {string}
- */
-export enum InlineResponse2007DataRoleEnum {
-    Publisher = 'publisher',
-    Subscriber = 'subscriber'
+    /**
+     * @type {Array<VideoWatchLog>}
+     * @memberof InlineResponse2007Data
+     */
+    items: Array<VideoWatchLog>;
 }
-

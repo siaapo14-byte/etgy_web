@@ -13,7 +13,7 @@
  */
 
 import { BaseResponse } from './base-response';
-import { InlineResponse20010Data } from './inline-response20010-data';
+import { LiveMessage } from './live-message';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { InlineResponse20010Data } from './inline-response20010-data';
 export interface InlineResponse20010 extends BaseResponse {
 
     /**
-     * @type {InlineResponse20010Data}
+     * @type {Array<LiveMessage>}
      * @memberof InlineResponse20010
      */
-    data: InlineResponse20010Data;
+    data: Array<LiveMessage>;
 }

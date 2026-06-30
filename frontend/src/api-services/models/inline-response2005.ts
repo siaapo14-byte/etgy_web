@@ -12,8 +12,8 @@
  * Do not edit the class manually.
  */
 
+import { AdminVideoCommentPagedResult } from './admin-video-comment-paged-result';
 import { BaseResponse } from './base-response';
-import { InlineResponse2005Data } from './inline-response2005-data';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { InlineResponse2005Data } from './inline-response2005-data';
 export interface InlineResponse2005 extends BaseResponse {
 
     /**
-     * @type {InlineResponse2005Data}
+     * @type {AdminVideoCommentPagedResult}
      * @memberof InlineResponse2005
      */
-    data: InlineResponse2005Data;
+    data: AdminVideoCommentPagedResult;
 }

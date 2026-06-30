@@ -13,7 +13,7 @@
  */
 
 import { BaseResponse } from './base-response';
-import { InlineResponse20011Data } from './inline-response20011-data';
+import { LiveStreamInfo } from './live-stream-info';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { InlineResponse20011Data } from './inline-response20011-data';
 export interface InlineResponse20011 extends BaseResponse {
 
     /**
-     * @type {InlineResponse20011Data}
+     * @type {LiveStreamInfo}
      * @memberof InlineResponse20011
      */
-    data: InlineResponse20011Data;
+    data: LiveStreamInfo;
 }

@@ -13,7 +13,7 @@
  */
 
 import { BaseResponse } from './base-response';
-import { LiveMessage } from './live-message';
+import { VideoWatchLog } from './video-watch-log';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { LiveMessage } from './live-message';
 export interface InlineResponse2006 extends BaseResponse {
 
     /**
-     * @type {Array<LiveMessage>}
+     * @type {VideoWatchLog}
      * @memberof InlineResponse2006
      */
-    data: Array<LiveMessage>;
+    data: VideoWatchLog;
 }

@@ -18,7 +18,7 @@ import { Configuration } from '../configuration';
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } from '../base';
 import { ErrorResponse } from '../models';
-import { IdPasswordBody } from '../models';
+import { IdPasswordBody1 } from '../models';
 import { InlineResponse201 } from '../models';
 /**
  * ChildrenApi - axios parameter creator
@@ -79,11 +79,11 @@ export const ChildrenApiAxiosParamCreator = function (configuration?: Configurat
          * 
          * @summary 修改儿童账号密码（平台管理员）
          * @param {string} id 
-         * @param {IdPasswordBody} [body] 
+         * @param {IdPasswordBody1} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiChildrenIdPasswordPost: async (id: string, body?: IdPasswordBody, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiChildrenIdPasswordPost: async (id: string, body?: IdPasswordBody1, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             if (id === null || id === undefined) {
                 throw new RequiredError('id','Required parameter id was null or undefined when calling apiChildrenIdPasswordPost.');
@@ -156,11 +156,11 @@ export const ChildrenApiFp = function(configuration?: Configuration) {
          * 
          * @summary 修改儿童账号密码（平台管理员）
          * @param {string} id 
-         * @param {IdPasswordBody} [body] 
+         * @param {IdPasswordBody1} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiChildrenIdPasswordPost(id: string, body?: IdPasswordBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+        async apiChildrenIdPasswordPost(id: string, body?: IdPasswordBody1, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
             const localVarAxiosArgs = await ChildrenApiAxiosParamCreator(configuration).apiChildrenIdPasswordPost(id, body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -190,11 +190,11 @@ export const ChildrenApiFactory = function (configuration?: Configuration, baseP
          * 
          * @summary 修改儿童账号密码（平台管理员）
          * @param {string} id 
-         * @param {IdPasswordBody} [body] 
+         * @param {IdPasswordBody1} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiChildrenIdPasswordPost(id: string, body?: IdPasswordBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+        async apiChildrenIdPasswordPost(id: string, body?: IdPasswordBody1, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
             return ChildrenApiFp(configuration).apiChildrenIdPasswordPost(id, body, options).then((request) => request(axios, basePath));
         },
     };
@@ -222,12 +222,12 @@ export class ChildrenApi extends BaseAPI {
      * 
      * @summary 修改儿童账号密码（平台管理员）
      * @param {string} id 
-     * @param {IdPasswordBody} [body] 
+     * @param {IdPasswordBody1} [body] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ChildrenApi
      */
-    public async apiChildrenIdPasswordPost(id: string, body?: IdPasswordBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+    public async apiChildrenIdPasswordPost(id: string, body?: IdPasswordBody1, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
         return ChildrenApiFp(this.configuration).apiChildrenIdPasswordPost(id, body, options).then((request) => request(this.axios, this.basePath));
     }
 }

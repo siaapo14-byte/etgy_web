@@ -12,7 +12,6 @@
  * Do not edit the class manually.
  */
 
-import { InlineResponse20012DataMessages } from './inline-response20012-data-messages';
  /**
  * 
  *
@@ -22,48 +21,48 @@ import { InlineResponse20012DataMessages } from './inline-response20012-data-mes
 export interface InlineResponse20012Data {
 
     /**
-     * @type {number}
+     * @type {string}
      * @memberof InlineResponse20012Data
      */
-    id: number;
-
-    /**
-     * @type {number}
-     * @memberof InlineResponse20012Data
-     */
-    userId: number;
+    appId: string;
 
     /**
      * @type {string}
      * @memberof InlineResponse20012Data
      */
-    mode: InlineResponse20012DataModeEnum;
+    channelName: string;
 
     /**
-     * @type {Date}
+     * @type {number}
      * @memberof InlineResponse20012Data
      */
-    createdAt: Date;
+    uid: number;
 
     /**
-     * @type {Date}
+     * @type {string}
      * @memberof InlineResponse20012Data
      */
-    updatedAt: Date;
+    role: InlineResponse20012DataRoleEnum;
 
     /**
-     * @type {Array<InlineResponse20012DataMessages>}
+     * @type {string}
      * @memberof InlineResponse20012Data
      */
-    messages: Array<InlineResponse20012DataMessages>;
+    token: string;
+
+    /**
+     * @type {number}
+     * @memberof InlineResponse20012Data
+     */
+    expireAt: number;
 }
 
 /**
  * @export
  * @enum {string}
  */
-export enum InlineResponse20012DataModeEnum {
-    STUDY = 'STUDY',
-    EMOTION = 'EMOTION'
+export enum InlineResponse20012DataRoleEnum {
+    Publisher = 'publisher',
+    Subscriber = 'subscriber'
 }
 

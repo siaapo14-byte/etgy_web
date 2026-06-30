@@ -13,6 +13,7 @@
  */
 
 import { BaseResponse } from './base-response';
+import { InlineResponse2001Data } from './inline-response2001-data';
  /**
  * 
  *
@@ -22,8 +23,8 @@ import { BaseResponse } from './base-response';
 export interface InlineResponse2001 extends BaseResponse {
 
     /**
-     * @type {any}
+     * @type {InlineResponse2001Data}
      * @memberof InlineResponse2001
      */
-    data: any;
+    data: InlineResponse2001Data;
 }

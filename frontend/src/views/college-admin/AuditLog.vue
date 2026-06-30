@@ -9,8 +9,9 @@
         <el-form :inline="true" :model="filters">
           <el-form-item label="资源类型">
             <el-select v-model="filters.targetType" placeholder="全部" clearable style="width: 150px">
-              <el-option label="视频" value="VIDEO" />
-              <el-option label="直播" value="LIVE" />
+              <el-option label="视频" value="Video" />
+              <el-option label="直播" value="Live" />
+              <el-option label="评论" value="VideoComment" />
             </el-select>
           </el-form-item>
           <el-form-item label="操作人">
@@ -27,7 +28,11 @@
         <el-table-column prop="userName" label="操作人" width="120" />
         <el-table-column prop="role" label="角色" width="120" />
         <el-table-column prop="action" label="操作" width="120" />
-        <el-table-column prop="resourceType" label="资源类型" width="100" />
+        <el-table-column prop="resourceType" label="资源类型" width="100">
+          <template #default="{ row }">
+            {{ formatResourceType(row.resourceType) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="details" label="详情" />
         <el-table-column prop="ip" label="IP地址" width="150" />
         <el-table-column prop="createdAt" label="操作时间" width="180">
@@ -75,9 +80,15 @@ const pageSize = ref(20)
 const total = ref(0)
 
 const filters = reactive({
-  targetType: '' as '' | 'VIDEO' | 'LIVE',
+  targetType: '' as '' | 'Video' | 'Live' | 'VideoComment',
   operatorName: ''
 })
+
+const resourceTypeLabels: Record<string, string> = {
+  Video: '视频',
+  Live: '直播',
+  VideoComment: '评论'
+}
 
 onMounted(async () => {
   await loadLogs()
@@ -88,6 +99,7 @@ const loadLogs = async () => {
     loading.value = true
     const res = await auditApi.getAuditLogs({
       targetType: filters.targetType || undefined,
+      operatorName: filters.operatorName.trim() || undefined,
       page: page.value,
       pageSize: pageSize.value
     })
@@ -102,6 +114,10 @@ const loadLogs = async () => {
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleString('zh-CN')
+}
+
+const formatResourceType = (type: string) => {
+  return resourceTypeLabels[type] ?? type
 }
 
 const handleSearch = () => {

@@ -13,7 +13,7 @@
  */
 
 import { BaseResponse } from './base-response';
-import { InlineResponse2009Data } from './inline-response2009-data';
+import { LiveRoomPagedResult } from './live-room-paged-result';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { InlineResponse2009Data } from './inline-response2009-data';
 export interface InlineResponse2009 extends BaseResponse {
 
     /**
-     * @type {InlineResponse2009Data}
+     * @type {LiveRoomPagedResult}
      * @memberof InlineResponse2009
      */
-    data: InlineResponse2009Data;
+    data: LiveRoomPagedResult;
 }

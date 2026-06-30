@@ -12,8 +12,8 @@
  * Do not edit the class manually.
  */
 
+import { AdminVideoPagedResult } from './admin-video-paged-result';
 import { BaseResponse } from './base-response';
-import { Dictionaries } from './dictionaries';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { Dictionaries } from './dictionaries';
 export interface InlineResponse2008 extends BaseResponse {
 
     /**
-     * @type {Dictionaries}
+     * @type {AdminVideoPagedResult}
      * @memberof InlineResponse2008
      */
-    data: Dictionaries;
+    data: AdminVideoPagedResult;
 }
