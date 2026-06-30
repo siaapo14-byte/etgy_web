@@ -78,6 +78,7 @@ const adaptLive = (l: ApiLiveRoom): Live => {
     DRAFT: 'draft',
     REVIEW: 'reviewing',
     PASSED: 'approved',
+    PUBLISHED: 'published',
     REJECTED: 'rejected',
     LIVING: 'live',
     FINISHED: 'ended',
@@ -285,7 +286,7 @@ export const liveApi = {
       intro: data.description || '',
       planStartTime: data.startTime ? (new Date(data.startTime) as any) : (new Date() as any),
       planEndTime: data.startTime
-        ? (new Date(new Date(data.startTime).getTime() + (data.duration || 0) * 1000) as any)
+        ? (new Date(new Date(data.startTime).getTime() + (data.duration || 0) * 60 * 1000) as any)
         : (new Date() as any),
       collegeId: data.collegeId || 0
     } as any)
@@ -297,7 +298,38 @@ export const liveApi = {
   submitReview: async (id: number): Promise<void> => {
     const req = await LiveApiFp(apiConfig).apiLiveIdSubmitPost(String(id))
     await req()
-  }
+  },
+
+  // 志愿者自己的直播列表
+  getMyLives: async (): Promise<Live[]> => {
+    const req = await LiveApiFp(apiConfig).apiLiveMineGet()
+    const res = await req()
+    const payload: any = res?.data?.data ?? res?.data
+    const list: any[] = Array.isArray(payload?.items) ? payload.items : []
+    return list.map((l: any) => adaptLive(l as ApiLiveRoom))
+  },
+
+  getLiveById: async (id: number): Promise<Live> => {
+    const req = await LiveApiFp(apiConfig).apiLiveIdGet(String(id))
+    const res = await req()
+    return adaptLive(res.data.data as ApiLiveRoom)
+  },
+
+  getAgoraRtcToken: async (id: number) => {
+    const req = await LiveApiFp(apiConfig).apiLiveIdAgoraRtcTokenPost(String(id))
+    const res = await req()
+    return res.data.data
+  },
+
+  startLive: async (id: number): Promise<void> => {
+    const req = await LiveApiFp(apiConfig).apiLiveIdStartPost(String(id))
+    await req()
+  },
+
+  finishLive: async (id: number): Promise<void> => {
+    const req = await LiveApiFp(apiConfig).apiLiveIdFinishPost(String(id), {})
+    await req()
+  },
 }
 
 // OSS 统一上传工具（封装 presign / 后端代传 两种方案）

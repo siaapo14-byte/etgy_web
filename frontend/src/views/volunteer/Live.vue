@@ -56,12 +56,20 @@
               上架
             </el-button>
             <el-button
-              v-if="row.status === 'published' || row.status === 'live'"
-              type="info"
+              v-if="row.status === 'published'"
+              type="success"
               size="small"
               @click="handleStartLive(row.id)"
             >
               开始直播
+            </el-button>
+            <el-button
+              v-if="row.status === 'live'"
+              type="warning"
+              size="small"
+              @click="enterLiveRoom(row.id)"
+            >
+              进入直播间
             </el-button>
             <el-button
               v-if="row.status === 'rejected'"
@@ -163,11 +171,14 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { liveApi } from '@/utils/api'
 import type { Live } from '@/utils/mockData'
 import { LiveApiFp } from '@/api-services/apis/live-api'
 import { apiConfig } from '@/apiClient'
+
+const router = useRouter()
 
 const showDialog = ref(false)
 const formRef = ref<FormInstance>()
@@ -208,7 +219,7 @@ onMounted(async () => {
 
 const loadLives = async () => {
   try {
-    const data = await liveApi.getLives()
+    const data = await liveApi.getMyLives()
     lives.value = data
   } catch (error: any) {
     ElMessage.error(error.message || '加载直播列表失败')
@@ -307,12 +318,15 @@ const handlePublish = async (id: number) => {
   }
 }
 
+const enterLiveRoom = (id: number) => {
+  router.push(`/volunteer/live/${id}/room`)
+}
+
 const handleStartLive = async (id: number) => {
   try {
-    const req = await LiveApiFp(apiConfig).apiLiveIdStartPost(String(id))
-    await req()
+    await liveApi.startLive(id)
     ElMessage.success('已开始直播')
-    await loadLives()
+    router.push(`/volunteer/live/${id}/room`)
   } catch (error: any) {
     ElMessage.error(error.message || '开始直播失败')
   }

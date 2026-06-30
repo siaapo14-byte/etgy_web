@@ -42,6 +42,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '直播申请' }
       },
       {
+        path: 'live/:id/room',
+        name: 'VolunteerLiveRoom',
+        component: () => import('@/views/volunteer/LiveRoom.vue'),
+        meta: { title: '直播中' }
+      },
+      {
         path: 'statistics',
         name: 'VolunteerStatistics',
         component: () => import('@/views/volunteer/Statistics.vue'),
