@@ -17,8 +17,7 @@ import { Configuration } from "./configuration";
 // @ts-ignore
 import globalAxios, { AxiosRequestConfig, AxiosInstance } from 'axios';
 
-// 默认走同源（开发环境由 Vite proxy 转发 /api；生产环境由部署域名反代 /api）
-export const BASE_PATH = "".replace(/\/+$/, "");
+export const BASE_PATH = "http://8.166.115.78".replace(/\/+$/, "");
 
 /**
  *

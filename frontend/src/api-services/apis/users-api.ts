@@ -19,6 +19,7 @@ import { Configuration } from '../configuration';
 import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } from '../base';
 import { ChildrenBatchBody } from '../models';
 import { ErrorResponse } from '../models';
+import { IdPasswordBody } from '../models';
 import { IdStatusBody } from '../models';
 import { IdStatusBody1 } from '../models';
 import { IdSuspendBody } from '../models';
@@ -226,6 +227,55 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
 
             if (pageSize !== undefined) {
                 localVarQueryParameter['pageSize'] = pageSize;
+            }
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 重置儿童设备绑定（平台管理员）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUsersChildrenIdResetDeviceBindingPost: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            if (id === null || id === undefined) {
+                throw new RequiredError('id','Required parameter id was null or undefined when calling apiUsersChildrenIdResetDeviceBindingPost.');
+            }
+            const localVarPath = `/api/users/children/{id}/reset-device-binding`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
             }
 
             const query = new URLSearchParams(localVarUrlObj.search);
@@ -709,6 +759,109 @@ export const UsersApiAxiosParamCreator = function (configuration?: Configuration
         },
         /**
          * 
+         * @summary 查看志愿者账号密码（管理员）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUsersVolunteersIdPasswordGet: async (id: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            if (id === null || id === undefined) {
+                throw new RequiredError('id','Required parameter id was null or undefined when calling apiUsersVolunteersIdPasswordGet.');
+            }
+            const localVarPath = `/api/users/volunteers/{id}/password`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @summary 修改志愿者账号密码（管理员）
+         * @param {string} id 
+         * @param {IdPasswordBody} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUsersVolunteersIdPasswordPost: async (id: string, body?: IdPasswordBody, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            if (id === null || id === undefined) {
+                throw new RequiredError('id','Required parameter id was null or undefined when calling apiUsersVolunteersIdPasswordPost.');
+            }
+            const localVarPath = `/api/users/volunteers/{id}/password`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            const needsSerialization = (typeof body !== "string") || localVarRequestOptions.headers['Content-Type'] === 'application/json';
+            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(body !== undefined ? body : {}) : (body || "");
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @summary 更新志愿者状态（管理员）
          * @param {string} id 
          * @param {IdStatusBody1} [body] 
@@ -885,6 +1038,20 @@ export const UsersApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary 重置儿童设备绑定（平台管理员）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersChildrenIdResetDeviceBindingPost(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+            const localVarAxiosArgs = await UsersApiAxiosParamCreator(configuration).apiUsersChildrenIdResetDeviceBindingPost(id, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 
          * @summary 重置儿童账号密码（平台管理员）
          * @param {string} id 
          * @param {*} [options] Override http request option.
@@ -1016,6 +1183,35 @@ export const UsersApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @summary 查看志愿者账号密码（管理员）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersVolunteersIdPasswordGet(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+            const localVarAxiosArgs = await UsersApiAxiosParamCreator(configuration).apiUsersVolunteersIdPasswordGet(id, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 
+         * @summary 修改志愿者账号密码（管理员）
+         * @param {string} id 
+         * @param {IdPasswordBody} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersVolunteersIdPasswordPost(id: string, body?: IdPasswordBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+            const localVarAxiosArgs = await UsersApiAxiosParamCreator(configuration).apiUsersVolunteersIdPasswordPost(id, body, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 
          * @summary 更新志愿者状态（管理员）
          * @param {string} id 
          * @param {IdStatusBody1} [body] 
@@ -1095,6 +1291,16 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
          */
         async apiUsersChildrenGet(search?: string, school?: string, grade?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
             return UsersApiFp(configuration).apiUsersChildrenGet(search, school, grade, page, pageSize, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 重置儿童设备绑定（平台管理员）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersChildrenIdResetDeviceBindingPost(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+            return UsersApiFp(configuration).apiUsersChildrenIdResetDeviceBindingPost(id, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -1193,6 +1399,27 @@ export const UsersApiFactory = function (configuration?: Configuration, basePath
         },
         /**
          * 
+         * @summary 查看志愿者账号密码（管理员）
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersVolunteersIdPasswordGet(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+            return UsersApiFp(configuration).apiUsersVolunteersIdPasswordGet(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @summary 修改志愿者账号密码（管理员）
+         * @param {string} id 
+         * @param {IdPasswordBody} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUsersVolunteersIdPasswordPost(id: string, body?: IdPasswordBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+            return UsersApiFp(configuration).apiUsersVolunteersIdPasswordPost(id, body, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @summary 更新志愿者状态（管理员）
          * @param {string} id 
          * @param {IdStatusBody1} [body] 
@@ -1269,6 +1496,17 @@ export class UsersApi extends BaseAPI {
      */
     public async apiUsersChildrenGet(search?: string, school?: string, grade?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
         return UsersApiFp(this.configuration).apiUsersChildrenGet(search, school, grade, page, pageSize, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 
+     * @summary 重置儿童设备绑定（平台管理员）
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof UsersApi
+     */
+    public async apiUsersChildrenIdResetDeviceBindingPost(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+        return UsersApiFp(this.configuration).apiUsersChildrenIdResetDeviceBindingPost(id, options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 
@@ -1373,6 +1611,29 @@ export class UsersApi extends BaseAPI {
      */
     public async apiUsersVolunteersGet(collegeId?: number, status?: string, userStatus?: string, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
         return UsersApiFp(this.configuration).apiUsersVolunteersGet(collegeId, status, userStatus, search, page, pageSize, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 
+     * @summary 查看志愿者账号密码（管理员）
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof UsersApi
+     */
+    public async apiUsersVolunteersIdPasswordGet(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+        return UsersApiFp(this.configuration).apiUsersVolunteersIdPasswordGet(id, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 
+     * @summary 修改志愿者账号密码（管理员）
+     * @param {string} id 
+     * @param {IdPasswordBody} [body] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof UsersApi
+     */
+    public async apiUsersVolunteersIdPasswordPost(id: string, body?: IdPasswordBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+        return UsersApiFp(this.configuration).apiUsersVolunteersIdPasswordPost(id, body, options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 

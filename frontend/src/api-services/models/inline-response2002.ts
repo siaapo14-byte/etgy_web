@@ -13,7 +13,6 @@
  */
 
 import { BaseResponse } from './base-response';
-import { Video } from './video';
  /**
  * 
  *
@@ -23,8 +22,8 @@ import { Video } from './video';
 export interface InlineResponse2002 extends BaseResponse {
 
     /**
-     * @type {Array<Video>}
+     * @type {any}
      * @memberof InlineResponse2002
      */
-    data: Array<Video>;
+    data: any;
 }

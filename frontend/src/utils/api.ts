@@ -877,48 +877,222 @@ export const reviewApi = {
   }
 }
 
+// 评论审核相关API（学院管理员第三层人工审核）
+export const commentApi = {
+  // 获取管理端评论审核列表（学院/平台管理员）
+  getComments: async (params?: {
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+    collegeId?: number
+    videoId?: number
+    q?: string
+    page?: number
+    pageSize?: number
+  }): Promise<{ items: any[]; total: number; page: number; pageSize: number }> => {
+    const page = Number(params?.page ?? 1)
+    const pageSize = Number(params?.pageSize ?? 20)
+    const req = await VideosApiFp(apiConfig).apiVideosCommentsAdminGet(
+      params?.status,
+      params?.collegeId,
+      params?.videoId,
+      params?.q,
+      page,
+      pageSize
+    )
+    const res = await req()
+    const payload: any = res.data?.data ?? res.data
+    const rawItems: any = payload?.items ?? payload?.list ?? payload?.records ?? payload
+    const list: any[] = Array.isArray(rawItems) ? rawItems : []
+    const total = Number(payload?.total ?? list.length)
+
+    const items = list.map((c: any) => ({
+      id: c.id,
+      videoId: c.videoId,
+      videoTitle: c.video?.title ?? c.videoTitle ?? '',
+      videoCollegeName: c.video?.college?.name ?? c.videoCollegeName ?? '',
+      content: c.content ?? '',
+      status: String(c.status ?? 'PENDING').toUpperCase(),
+      authorId: c.authorId,
+      authorName:
+        c.author?.name ??
+        c.author?.realName ??
+        c.author?.username ??
+        c.authorName ??
+        (c.authorId ? `用户${c.authorId}` : '匿名'),
+      rejectReason: c.rejectReason ?? '',
+      reviewedBy: c.reviewedBy ?? null,
+      reviewedAt: c.reviewedAt ? new Date(c.reviewedAt).toISOString() : '',
+      createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()
+    }))
+
+    return {
+      items,
+      total,
+      page: Number(payload?.page ?? page),
+      pageSize: Number(payload?.pageSize ?? pageSize)
+    }
+  },
+
+  // 审核单条评论（通过/驳回）
+  auditComment: async (commentId: number, action: 'approve' | 'reject', reason?: string): Promise<void> => {
+    const req = await VideosApiFp(apiConfig).apiVideosCommentsCommentIdAuditPost(String(commentId), {
+      pass: action === 'approve',
+      reason: action === 'reject' ? (reason || '') : undefined
+    } as any)
+    await req()
+  },
+
+  // 批量审核评论
+  auditCommentsBatch: async (ids: number[], action: 'approve' | 'reject', reason?: string): Promise<void> => {
+    const req = await VideosApiFp(apiConfig).apiVideosCommentsAuditBatchPost({
+      ids,
+      pass: action === 'approve',
+      reason: action === 'reject' ? (reason || '') : undefined
+    } as any)
+    await req()
+  }
+}
+
+// 敏感词库API（平台管理员）
+export const sensitiveWordApi = {
+  // 获取敏感词列表
+  getWords: async (params?: {
+    q?: string
+    isActive?: boolean
+    page?: number
+    pageSize?: number
+  }): Promise<{ items: any[]; total: number; page: number; pageSize: number }> => {
+    const page = Number(params?.page ?? 1)
+    const pageSize = Number(params?.pageSize ?? 20)
+    const req = await PlatformApiFp(apiConfig).apiPlatformSensitiveWordsGet(
+      params?.q,
+      params?.isActive,
+      page,
+      pageSize
+    )
+    const res = await req()
+    const payload: any = res.data?.data ?? res.data
+    const rawItems: any =
+      payload?.items ??
+      payload?.list ??
+      payload?.records ??
+      payload?.rows ??
+      payload?.data ??
+      payload
+    const list: any[] = Array.isArray(rawItems) ? rawItems : []
+    const total = Number(payload?.total ?? list.length)
+
+    const items = list.map((w: any) => ({
+      id: w.id,
+      word: w.word ?? w.keyword ?? w.text ?? w.value ?? '',
+      isActive: w.isActive ?? w.enabled ?? true,
+      createdAt: w.createdAt ? new Date(w.createdAt).toISOString() : ''
+    }))
+
+    return { items, total, page, pageSize }
+  },
+
+  // 新增单个敏感词
+  addWord: async (word: string, isActive = true): Promise<void> => {
+    const req = await PlatformApiFp(apiConfig).apiPlatformSensitiveWordsPost({ word, isActive } as any)
+    await req()
+  },
+
+  // 批量新增敏感词
+  batchAddWords: async (words: string[], overwrite = false): Promise<void> => {
+    const req = await PlatformApiFp(apiConfig).apiPlatformSensitiveWordsBatchPost({ words, overwrite } as any)
+    await req()
+  },
+
+  // 启用/停用敏感词
+  setWordActive: async (id: number, isActive: boolean): Promise<void> => {
+    const req = await PlatformApiFp(apiConfig).apiPlatformSensitiveWordsIdPatch(String(id), { isActive } as any)
+    await req()
+  },
+
+  // 删除敏感词
+  deleteWord: async (id: number): Promise<void> => {
+    const req = await PlatformApiFp(apiConfig).apiPlatformSensitiveWordsIdDelete(String(id))
+    await req()
+  }
+}
+
+const mapAuditLogItem = (a: any): AuditLog => {
+  const operator = a.operator
+  return {
+    id: a.id,
+    userId: a.operatorId ?? operator?.id ?? 0,
+    userName:
+      a.operatorName ??
+      operator?.adminProfile?.realName ??
+      operator?.volunteerProfile?.realName ??
+      operator?.realName ??
+      operator?.name ??
+      operator?.username ??
+      (a.operatorId ? `用户${a.operatorId}` : ''),
+    role: a.operatorRole ?? operator?.role ?? '',
+    action: a.action ?? '',
+    resourceType: a.targetType ?? '',
+    resourceId: Number(a.targetId ?? 0),
+    details: a.detail ?? '',
+    ip: a.clientIp ?? a.ip ?? '',
+    createdAt: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString()
+  }
+}
+
+const parseAuditLogPayload = (payload: any, list: any[]) => {
+  const page = Number(payload?.page ?? 1)
+  const pageSize = Number(payload?.pageSize ?? 20)
+  const total = Number(payload?.total ?? list.length)
+  return { items: list.map(mapAuditLogItem), total, page, pageSize }
+}
+
 // 审计日志API
 export const auditApi = {
   // 获取审计日志
   getAuditLogs: async (params?: any): Promise<{ items: AuditLog[]; total: number; page: number; pageSize: number }> => {
-    const req = await PlatformApiFp(apiConfig).apiPlatformAuditLogsGet(
-      params?.collegeId,
-      params?.action,
-      params?.operatorId,
-      params?.targetType,
-      params?.targetId,
-      params?.startTime,
-      params?.endTime,
-      params?.page,
-      params?.pageSize
-    )
-    const res = await req()
-    const payload: any = res.data?.data ?? res.data
+    const page = Number(params?.page ?? 1)
+    const pageSize = Number(params?.pageSize ?? 20)
+    const operatorName = String(params?.operatorName ?? '').trim()
 
-    const page = Number(payload?.page ?? params?.page ?? 1)
-    const pageSize = Number(payload?.pageSize ?? params?.pageSize ?? 20)
-    const total = Number(payload?.total ?? 0)
-
-    const rawItems: any = payload?.items ?? payload?.list ?? payload?.records ?? payload?.data ?? payload
-    const list: any[] = Array.isArray(rawItems) ? rawItems : []
-    if (!Array.isArray(rawItems)) {
-      console.warn('getAuditLogs: 后端返回的数据不是数组:', rawItems)
+    const fetchLogs = async (fetchPage: number, fetchPageSize: number) => {
+      const req = await PlatformApiFp(apiConfig).apiPlatformAuditLogsGet(
+        params?.collegeId,
+        params?.action,
+        params?.operatorId,
+        params?.targetType,
+        params?.targetId,
+        params?.startTime,
+        params?.endTime,
+        fetchPage,
+        fetchPageSize
+      )
+      const res = await req()
+      const payload: any = res.data?.data ?? res.data
+      const rawItems: any = payload?.items ?? payload?.list ?? payload?.records ?? payload?.data ?? payload
+      const list: any[] = Array.isArray(rawItems) ? rawItems : []
+      if (!Array.isArray(rawItems)) {
+        console.warn('getAuditLogs: 后端返回的数据不是数组:', rawItems)
+      }
+      return { payload, list }
     }
 
-    const items = list.map((a: any) => ({
-      id: a.id,
-      userId: a.operatorId ?? 0,
-      userName: a.operatorName ?? a.operator?.name ?? '',
-      role: a.operatorRole ?? a.operator?.role ?? '',
-      action: a.action ?? '',
-      resourceType: a.targetType ?? '',
-      resourceId: Number(a.targetId ?? 0),
-      details: a.detail ?? '',
-      ip: a.clientIp ?? a.ip ?? '',
-      createdAt: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString()
-    }))
+    // 后端仅支持 operatorId，按姓名搜索需拉取后在客户端过滤
+    if (operatorName) {
+      const { list } = await fetchLogs(1, 1000)
+      const filtered = list
+        .map(mapAuditLogItem)
+        .filter((item) => item.userName.includes(operatorName))
+      const start = (page - 1) * pageSize
+      return {
+        items: filtered.slice(start, start + pageSize),
+        total: filtered.length,
+        page,
+        pageSize
+      }
+    }
 
-    return { items, total, page, pageSize }
+    const { payload, list } = await fetchLogs(page, pageSize)
+    return parseAuditLogPayload({ ...payload, page, pageSize }, list)
   }
 }
 
@@ -948,6 +1122,8 @@ export default {
   childApi,
   collegeApi,
   reviewApi,
+  commentApi,
+  sensitiveWordApi,
   auditApi,
   authApi
 }

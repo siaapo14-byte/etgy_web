@@ -12,6 +12,7 @@
  * Do not edit the class manually.
  */
 
+import { ApiauthloginDeviceInfo } from './apiauthlogin-device-info';
  /**
  * 
  *
@@ -39,6 +40,20 @@ export interface AuthLoginBody {
      * @memberof AuthLoginBody
      */
     role?: AuthLoginBodyRoleEnum;
+
+    /**
+     * 设备唯一标识（儿童端设备绑定）
+     *
+     * @type {string}
+     * @memberof AuthLoginBody
+     */
+    deviceId?: string;
+
+    /**
+     * @type {ApiauthloginDeviceInfo}
+     * @memberof AuthLoginBody
+     */
+    deviceInfo?: ApiauthloginDeviceInfo;
 }
 
 /**

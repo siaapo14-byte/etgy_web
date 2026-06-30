@@ -66,8 +66,7 @@ export const OSSApiAxiosParamCreator = function (configuration?: Configuration) 
                 localVarFormParams.append('file', file as any);
             }
 
-            // 重要：不要手动设置 multipart/form-data。
-            // 让浏览器/axios 自动生成带 boundary 的 Content-Type，否则后端可能收不到有效 body。
+            localVarHeaderParameter['Content-Type'] = 'multipart/form-data';
             const query = new URLSearchParams(localVarUrlObj.search);
             for (const key in localVarQueryParameter) {
                 query.set(key, localVarQueryParameter[key]);

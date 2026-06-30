@@ -18,7 +18,7 @@ import { Configuration } from '../configuration';
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } from '../base';
 import { ErrorResponse } from '../models';
-import { InlineResponse2008 } from '../models';
+import { InlineResponse20013 } from '../models';
 /**
  * MetaApi - axios parameter creator
  * @export
@@ -74,7 +74,7 @@ export const MetaApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiMetaDictionariesGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2008>>> {
+        async apiMetaDictionariesGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20013>>> {
             const localVarAxiosArgs = await MetaApiAxiosParamCreator(configuration).apiMetaDictionariesGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -96,7 +96,7 @@ export const MetaApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiMetaDictionariesGet(options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2008>> {
+        async apiMetaDictionariesGet(options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20013>> {
             return MetaApiFp(configuration).apiMetaDictionariesGet(options).then((request) => request(axios, basePath));
         },
     };
@@ -116,7 +116,7 @@ export class MetaApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof MetaApi
      */
-    public async apiMetaDictionariesGet(options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2008>> {
+    public async apiMetaDictionariesGet(options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20013>> {
         return MetaApiFp(this.configuration).apiMetaDictionariesGet(options).then((request) => request(this.axios, this.basePath));
     }
 }

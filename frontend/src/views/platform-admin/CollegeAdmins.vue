@@ -16,7 +16,7 @@
       <el-table :data="admins" style="width: 100%">
         <el-table-column prop="name" label="姓名" width="120" />
         <el-table-column prop="username" label="账号" width="150" />
-        <el-table-column prop="collegeName" label="所属学院" width="150" />
+        <el-table-column prop="collegeName" label="所属学院" width="220" />
         <el-table-column prop="password" label="密码" width="180">
           <template #default="{ row }">
             <div class="password-cell">
@@ -40,7 +40,7 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="320" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button type="primary" size="small" @click="handleEditPassword(row)">修改密码</el-button>

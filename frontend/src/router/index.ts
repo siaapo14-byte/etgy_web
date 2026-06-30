@@ -90,6 +90,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '直播审核' }
       },
       {
+        path: 'comments/review',
+        name: 'CollegeCommentReview',
+        component: () => import('@/views/college-admin/CommentReview.vue'),
+        meta: { title: '评论审核' }
+      },
+      {
         path: 'volunteers',
         name: 'CollegeVolunteers',
         component: () => import('@/views/college-admin/Volunteers.vue'),
@@ -160,6 +166,12 @@ const routes: RouteRecordRaw[] = [
         name: 'PlatformChildren',
         component: () => import('@/views/platform-admin/Children.vue'),
         meta: { title: '儿童账号建档' }
+      },
+      {
+        path: 'sensitive-words',
+        name: 'PlatformSensitiveWords',
+        component: () => import('@/views/platform-admin/SensitiveWords.vue'),
+        meta: { title: '敏感词库配置' }
       },
       {
         path: 'audit',

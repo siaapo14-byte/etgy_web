@@ -17,8 +17,9 @@
           </el-form-item>
           <el-form-item label="资源类型">
             <el-select v-model="filters.resourceType" placeholder="全部" clearable style="width: 150px">
-              <el-option label="视频" value="video" />
-              <el-option label="直播" value="live" />
+              <el-option label="视频" value="Video" />
+              <el-option label="直播" value="Live" />
+              <el-option label="评论" value="VideoComment" />
             </el-select>
           </el-form-item>
           <el-form-item label="操作人">
@@ -86,7 +87,10 @@ onMounted(async () => {
 
 const loadLogs = async () => {
   try {
-    logs.value = await auditApi.getAuditLogs()
+    const res = await auditApi.getAuditLogs({
+      operatorName: filters.userName.trim() || undefined
+    })
+    logs.value = res.items
   } catch (error: any) {
     console.error('加载审计日志失败', error)
   }

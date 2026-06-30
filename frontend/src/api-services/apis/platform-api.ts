@@ -20,9 +20,9 @@ import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } fr
 import { CollegeadminsIdBody } from '../models';
 import { CollegesIdBody } from '../models';
 import { ErrorResponse } from '../models';
-import { IdPasswordBody1 } from '../models';
+import { IdPasswordBody2 } from '../models';
 import { IdStatusBody2 } from '../models';
-import { InlineResponse2009 } from '../models';
+import { InlineResponse20014 } from '../models';
 import { InlineResponse201 } from '../models';
 import { PlatformCollegeadminsBody } from '../models';
 import { PlatformCollegesBody } from '../models';
@@ -278,11 +278,11 @@ export const PlatformApiAxiosParamCreator = function (configuration?: Configurat
          * 
          * @summary 修改学院管理员账号密码（平台管理员）
          * @param {string} id 
-         * @param {IdPasswordBody1} [body] 
+         * @param {IdPasswordBody2} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiPlatformCollegeAdminsIdPasswordPost: async (id: string, body?: IdPasswordBody1, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiPlatformCollegeAdminsIdPasswordPost: async (id: string, body?: IdPasswordBody2, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             if (id === null || id === undefined) {
                 throw new RequiredError('id','Required parameter id was null or undefined when calling apiPlatformCollegeAdminsIdPasswordPost.');
@@ -1222,11 +1222,11 @@ export const PlatformApiFp = function(configuration?: Configuration) {
          * 
          * @summary 修改学院管理员账号密码（平台管理员）
          * @param {string} id 
-         * @param {IdPasswordBody1} [body] 
+         * @param {IdPasswordBody2} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiPlatformCollegeAdminsIdPasswordPost(id: string, body?: IdPasswordBody1, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+        async apiPlatformCollegeAdminsIdPasswordPost(id: string, body?: IdPasswordBody2, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
             const localVarAxiosArgs = await PlatformApiAxiosParamCreator(configuration).apiPlatformCollegeAdminsIdPasswordPost(id, body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1325,7 +1325,7 @@ export const PlatformApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiPlatformContentPolicyGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2009>>> {
+        async apiPlatformContentPolicyGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20014>>> {
             const localVarAxiosArgs = await PlatformApiAxiosParamCreator(configuration).apiPlatformContentPolicyGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1339,7 +1339,7 @@ export const PlatformApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiPlatformContentPolicyPut(body?: PlatformContentpolicyBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2009>>> {
+        async apiPlatformContentPolicyPut(body?: PlatformContentpolicyBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20014>>> {
             const localVarAxiosArgs = await PlatformApiAxiosParamCreator(configuration).apiPlatformContentPolicyPut(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1526,11 +1526,11 @@ export const PlatformApiFactory = function (configuration?: Configuration, baseP
          * 
          * @summary 修改学院管理员账号密码（平台管理员）
          * @param {string} id 
-         * @param {IdPasswordBody1} [body] 
+         * @param {IdPasswordBody2} [body] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiPlatformCollegeAdminsIdPasswordPost(id: string, body?: IdPasswordBody1, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+        async apiPlatformCollegeAdminsIdPasswordPost(id: string, body?: IdPasswordBody2, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
             return PlatformApiFp(configuration).apiPlatformCollegeAdminsIdPasswordPost(id, body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1601,7 +1601,7 @@ export const PlatformApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiPlatformContentPolicyGet(options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2009>> {
+        async apiPlatformContentPolicyGet(options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20014>> {
             return PlatformApiFp(configuration).apiPlatformContentPolicyGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -1611,7 +1611,7 @@ export const PlatformApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiPlatformContentPolicyPut(body?: PlatformContentpolicyBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2009>> {
+        async apiPlatformContentPolicyPut(body?: PlatformContentpolicyBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20014>> {
             return PlatformApiFp(configuration).apiPlatformContentPolicyPut(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1767,12 +1767,12 @@ export class PlatformApi extends BaseAPI {
      * 
      * @summary 修改学院管理员账号密码（平台管理员）
      * @param {string} id 
-     * @param {IdPasswordBody1} [body] 
+     * @param {IdPasswordBody2} [body] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof PlatformApi
      */
-    public async apiPlatformCollegeAdminsIdPasswordPost(id: string, body?: IdPasswordBody1, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+    public async apiPlatformCollegeAdminsIdPasswordPost(id: string, body?: IdPasswordBody2, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
         return PlatformApiFp(this.configuration).apiPlatformCollegeAdminsIdPasswordPost(id, body, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1850,7 +1850,7 @@ export class PlatformApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof PlatformApi
      */
-    public async apiPlatformContentPolicyGet(options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2009>> {
+    public async apiPlatformContentPolicyGet(options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20014>> {
         return PlatformApiFp(this.configuration).apiPlatformContentPolicyGet(options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1861,7 +1861,7 @@ export class PlatformApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof PlatformApi
      */
-    public async apiPlatformContentPolicyPut(body?: PlatformContentpolicyBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2009>> {
+    public async apiPlatformContentPolicyPut(body?: PlatformContentpolicyBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20014>> {
         return PlatformApiFp(this.configuration).apiPlatformContentPolicyPut(body, options).then((request) => request(this.axios, this.basePath));
     }
     /**

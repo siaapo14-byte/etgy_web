@@ -17,12 +17,14 @@ import { Configuration } from '../configuration';
 // Some imports not used depending on template conditions
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } from '../base';
+import { ChatStreamBody } from '../models';
+import { ErrorResponse } from '../models';
 import { IdHandleBody } from '../models';
-import { InlineResponse20010 } from '../models';
-import { InlineResponse20011 } from '../models';
-import { InlineResponse20012 } from '../models';
-import { InlineResponse20013 } from '../models';
-import { InlineResponse20014 } from '../models';
+import { InlineResponse20015 } from '../models';
+import { InlineResponse20016 } from '../models';
+import { InlineResponse20017 } from '../models';
+import { InlineResponse20018 } from '../models';
+import { InlineResponse20019 } from '../models';
 import { TutorChatBody } from '../models';
 /**
  * AIApi - axios parameter creator
@@ -169,6 +171,54 @@ export const AIApiAxiosParamCreator = function (configuration?: Configuration) {
             };
         },
         /**
+         * 通过 SSE 协议实现打字机效果的流式 AI 对话。事件: text_chunk, text_complete, error, done。
+         * @summary AI 辅导流式对话 (SSE)
+         * @param {ChatStreamBody} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiAiTutorChatStreamPost: async (body?: ChatStreamBody, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/ai/tutor/chat/stream`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions :AxiosRequestConfig = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            const needsSerialization = (typeof body !== "string") || localVarRequestOptions.headers['Content-Type'] === 'application/json';
+            localVarRequestOptions.data =  needsSerialization ? JSON.stringify(body !== undefined ? body : {}) : (body || "");
+
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 
          * @summary 获取 AI 辅导会话列表（儿童）
          * @param {number} [page] 
@@ -271,7 +321,7 @@ export const AIApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiRiskAlertsGet(status?: string, collegeId?: number, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20013>>> {
+        async apiAiRiskAlertsGet(status?: string, collegeId?: number, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20018>>> {
             const localVarAxiosArgs = await AIApiAxiosParamCreator(configuration).apiAiRiskAlertsGet(status, collegeId, page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -286,7 +336,7 @@ export const AIApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiRiskAlertsIdHandlePatch(id: string, body?: IdHandleBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20014>>> {
+        async apiAiRiskAlertsIdHandlePatch(id: string, body?: IdHandleBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20019>>> {
             const localVarAxiosArgs = await AIApiAxiosParamCreator(configuration).apiAiRiskAlertsIdHandlePatch(id, body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -300,8 +350,22 @@ export const AIApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiTutorChatPost(body?: TutorChatBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20010>>> {
+        async apiAiTutorChatPost(body?: TutorChatBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20015>>> {
             const localVarAxiosArgs = await AIApiAxiosParamCreator(configuration).apiAiTutorChatPost(body, options);
+            return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
+         * 通过 SSE 协议实现打字机效果的流式 AI 对话。事件: text_chunk, text_complete, error, done。
+         * @summary AI 辅导流式对话 (SSE)
+         * @param {ChatStreamBody} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiAiTutorChatStreamPost(body?: ChatStreamBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            const localVarAxiosArgs = await AIApiAxiosParamCreator(configuration).apiAiTutorChatStreamPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
@@ -315,7 +379,7 @@ export const AIApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiTutorConversationsGet(page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20011>>> {
+        async apiAiTutorConversationsGet(page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20016>>> {
             const localVarAxiosArgs = await AIApiAxiosParamCreator(configuration).apiAiTutorConversationsGet(page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -329,7 +393,7 @@ export const AIApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiTutorConversationsIdGet(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20012>>> {
+        async apiAiTutorConversationsIdGet(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20017>>> {
             const localVarAxiosArgs = await AIApiAxiosParamCreator(configuration).apiAiTutorConversationsIdGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -355,7 +419,7 @@ export const AIApiFactory = function (configuration?: Configuration, basePath?: 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiRiskAlertsGet(status?: string, collegeId?: number, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20013>> {
+        async apiAiRiskAlertsGet(status?: string, collegeId?: number, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20018>> {
             return AIApiFp(configuration).apiAiRiskAlertsGet(status, collegeId, page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
@@ -366,7 +430,7 @@ export const AIApiFactory = function (configuration?: Configuration, basePath?: 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiRiskAlertsIdHandlePatch(id: string, body?: IdHandleBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20014>> {
+        async apiAiRiskAlertsIdHandlePatch(id: string, body?: IdHandleBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20019>> {
             return AIApiFp(configuration).apiAiRiskAlertsIdHandlePatch(id, body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -376,8 +440,18 @@ export const AIApiFactory = function (configuration?: Configuration, basePath?: 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiTutorChatPost(body?: TutorChatBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20010>> {
+        async apiAiTutorChatPost(body?: TutorChatBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20015>> {
             return AIApiFp(configuration).apiAiTutorChatPost(body, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 通过 SSE 协议实现打字机效果的流式 AI 对话。事件: text_chunk, text_complete, error, done。
+         * @summary AI 辅导流式对话 (SSE)
+         * @param {ChatStreamBody} [body] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiAiTutorChatStreamPost(body?: ChatStreamBody, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            return AIApiFp(configuration).apiAiTutorChatStreamPost(body, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -387,7 +461,7 @@ export const AIApiFactory = function (configuration?: Configuration, basePath?: 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiTutorConversationsGet(page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20011>> {
+        async apiAiTutorConversationsGet(page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20016>> {
             return AIApiFp(configuration).apiAiTutorConversationsGet(page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
@@ -397,7 +471,7 @@ export const AIApiFactory = function (configuration?: Configuration, basePath?: 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiAiTutorConversationsIdGet(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20012>> {
+        async apiAiTutorConversationsIdGet(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20017>> {
             return AIApiFp(configuration).apiAiTutorConversationsIdGet(id, options).then((request) => request(axios, basePath));
         },
     };
@@ -421,7 +495,7 @@ export class AIApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AIApi
      */
-    public async apiAiRiskAlertsGet(status?: string, collegeId?: number, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20013>> {
+    public async apiAiRiskAlertsGet(status?: string, collegeId?: number, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20018>> {
         return AIApiFp(this.configuration).apiAiRiskAlertsGet(status, collegeId, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -433,7 +507,7 @@ export class AIApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AIApi
      */
-    public async apiAiRiskAlertsIdHandlePatch(id: string, body?: IdHandleBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20014>> {
+    public async apiAiRiskAlertsIdHandlePatch(id: string, body?: IdHandleBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20019>> {
         return AIApiFp(this.configuration).apiAiRiskAlertsIdHandlePatch(id, body, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -444,8 +518,19 @@ export class AIApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AIApi
      */
-    public async apiAiTutorChatPost(body?: TutorChatBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20010>> {
+    public async apiAiTutorChatPost(body?: TutorChatBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20015>> {
         return AIApiFp(this.configuration).apiAiTutorChatPost(body, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     * 通过 SSE 协议实现打字机效果的流式 AI 对话。事件: text_chunk, text_complete, error, done。
+     * @summary AI 辅导流式对话 (SSE)
+     * @param {ChatStreamBody} [body] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof AIApi
+     */
+    public async apiAiTutorChatStreamPost(body?: ChatStreamBody, options?: AxiosRequestConfig) : Promise<AxiosResponse<void>> {
+        return AIApiFp(this.configuration).apiAiTutorChatStreamPost(body, options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 
@@ -456,7 +541,7 @@ export class AIApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AIApi
      */
-    public async apiAiTutorConversationsGet(page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20011>> {
+    public async apiAiTutorConversationsGet(page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20016>> {
         return AIApiFp(this.configuration).apiAiTutorConversationsGet(page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -467,7 +552,7 @@ export class AIApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof AIApi
      */
-    public async apiAiTutorConversationsIdGet(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20012>> {
+    public async apiAiTutorConversationsIdGet(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20017>> {
         return AIApiFp(this.configuration).apiAiTutorConversationsIdGet(id, options).then((request) => request(this.axios, this.basePath));
     }
 }

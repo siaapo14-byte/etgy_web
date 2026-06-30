@@ -44,6 +44,10 @@
             <el-icon><UserFilled /></el-icon>
             <span>儿童账号建档</span>
           </el-menu-item>
+          <el-menu-item index="/platform-admin/sensitive-words">
+            <el-icon><Filter /></el-icon>
+            <span>敏感词库配置</span>
+          </el-menu-item>
           <el-menu-item index="/platform-admin/audit">
             <el-icon><Document /></el-icon>
             <span>全局审计日志</span>

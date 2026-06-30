@@ -13,7 +13,7 @@
  */
 
 import { BaseResponse } from './base-response';
-import { VideoWatchLog } from './video-watch-log';
+import { VideoComment } from './video-comment';
  /**
  * 
  *
@@ -23,8 +23,8 @@ import { VideoWatchLog } from './video-watch-log';
 export interface InlineResponse2004 extends BaseResponse {
 
     /**
-     * @type {VideoWatchLog}
+     * @type {Array<VideoComment>}
      * @memberof InlineResponse2004
      */
-    data: VideoWatchLog;
+    data: Array<VideoComment>;
 }

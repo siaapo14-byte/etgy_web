@@ -23,9 +23,10 @@ import { IdAuditBody1 } from '../models';
 import { IdFinishBody } from '../models';
 import { IdMessagesBody } from '../models';
 import { IdOfflineBody1 } from '../models';
-import { InlineResponse2006 } from '../models';
-import { InlineResponse2007 } from '../models';
-import { InlineResponse201 } from '../models';
+import { InlineResponse20010 } from '../models';
+import { InlineResponse20011 } from '../models';
+import { InlineResponse20012 } from '../models';
+import { InlineResponse2009 } from '../models';
 import { InlineResponse2014 } from '../models';
 import { InlineResponse2015 } from '../models';
 /**
@@ -853,7 +854,7 @@ export const LiveApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveAdminGet(status?: string, collegeId?: number, anchorId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+        async apiLiveAdminGet(status?: string, collegeId?: number, anchorId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2009>>> {
             const localVarAxiosArgs = await LiveApiAxiosParamCreator(configuration).apiLiveAdminGet(status, collegeId, anchorId, search, page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -871,7 +872,7 @@ export const LiveApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveGet(tab?: string, collegeId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+        async apiLiveGet(tab?: string, collegeId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2009>>> {
             const localVarAxiosArgs = await LiveApiAxiosParamCreator(configuration).apiLiveGet(tab, collegeId, search, page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -885,7 +886,7 @@ export const LiveApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveIdAgoraRtcTokenPost(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2007>>> {
+        async apiLiveIdAgoraRtcTokenPost(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20012>>> {
             const localVarAxiosArgs = await LiveApiAxiosParamCreator(configuration).apiLiveIdAgoraRtcTokenPost(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -945,7 +946,7 @@ export const LiveApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveIdMessagesGet(id: string, afterId?: number, limit?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2006>>> {
+        async apiLiveIdMessagesGet(id: string, afterId?: number, limit?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20010>>> {
             const localVarAxiosArgs = await LiveApiAxiosParamCreator(configuration).apiLiveIdMessagesGet(id, afterId, limit, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1017,7 +1018,7 @@ export const LiveApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveIdStreamGet(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+        async apiLiveIdStreamGet(id: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse20011>>> {
             const localVarAxiosArgs = await LiveApiAxiosParamCreator(configuration).apiLiveIdStreamGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1047,7 +1048,7 @@ export const LiveApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveMineGet(status?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>> {
+        async apiLiveMineGet(status?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2009>>> {
             const localVarAxiosArgs = await LiveApiAxiosParamCreator(configuration).apiLiveMineGet(status, page, pageSize, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1089,7 +1090,7 @@ export const LiveApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveAdminGet(status?: string, collegeId?: number, anchorId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+        async apiLiveAdminGet(status?: string, collegeId?: number, anchorId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2009>> {
             return LiveApiFp(configuration).apiLiveAdminGet(status, collegeId, anchorId, search, page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1103,7 +1104,7 @@ export const LiveApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveGet(tab?: string, collegeId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+        async apiLiveGet(tab?: string, collegeId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2009>> {
             return LiveApiFp(configuration).apiLiveGet(tab, collegeId, search, page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1113,7 +1114,7 @@ export const LiveApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveIdAgoraRtcTokenPost(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2007>> {
+        async apiLiveIdAgoraRtcTokenPost(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20012>> {
             return LiveApiFp(configuration).apiLiveIdAgoraRtcTokenPost(id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1157,7 +1158,7 @@ export const LiveApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveIdMessagesGet(id: string, afterId?: number, limit?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2006>> {
+        async apiLiveIdMessagesGet(id: string, afterId?: number, limit?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20010>> {
             return LiveApiFp(configuration).apiLiveIdMessagesGet(id, afterId, limit, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1209,7 +1210,7 @@ export const LiveApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveIdStreamGet(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+        async apiLiveIdStreamGet(id: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse20011>> {
             return LiveApiFp(configuration).apiLiveIdStreamGet(id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1231,7 +1232,7 @@ export const LiveApiFactory = function (configuration?: Configuration, basePath?
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiLiveMineGet(status?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>> {
+        async apiLiveMineGet(status?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2009>> {
             return LiveApiFp(configuration).apiLiveMineGet(status, page, pageSize, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1267,7 +1268,7 @@ export class LiveApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof LiveApi
      */
-    public async apiLiveAdminGet(status?: string, collegeId?: number, anchorId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+    public async apiLiveAdminGet(status?: string, collegeId?: number, anchorId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2009>> {
         return LiveApiFp(this.configuration).apiLiveAdminGet(status, collegeId, anchorId, search, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1282,7 +1283,7 @@ export class LiveApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof LiveApi
      */
-    public async apiLiveGet(tab?: string, collegeId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+    public async apiLiveGet(tab?: string, collegeId?: number, search?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2009>> {
         return LiveApiFp(this.configuration).apiLiveGet(tab, collegeId, search, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1293,7 +1294,7 @@ export class LiveApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof LiveApi
      */
-    public async apiLiveIdAgoraRtcTokenPost(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2007>> {
+    public async apiLiveIdAgoraRtcTokenPost(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20012>> {
         return LiveApiFp(this.configuration).apiLiveIdAgoraRtcTokenPost(id, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1341,7 +1342,7 @@ export class LiveApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof LiveApi
      */
-    public async apiLiveIdMessagesGet(id: string, afterId?: number, limit?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2006>> {
+    public async apiLiveIdMessagesGet(id: string, afterId?: number, limit?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20010>> {
         return LiveApiFp(this.configuration).apiLiveIdMessagesGet(id, afterId, limit, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1398,7 +1399,7 @@ export class LiveApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof LiveApi
      */
-    public async apiLiveIdStreamGet(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+    public async apiLiveIdStreamGet(id: string, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse20011>> {
         return LiveApiFp(this.configuration).apiLiveIdStreamGet(id, options).then((request) => request(this.axios, this.basePath));
     }
     /**
@@ -1422,7 +1423,7 @@ export class LiveApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof LiveApi
      */
-    public async apiLiveMineGet(status?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse201>> {
+    public async apiLiveMineGet(status?: string, page?: number, pageSize?: number, options?: AxiosRequestConfig) : Promise<AxiosResponse<InlineResponse2009>> {
         return LiveApiFp(this.configuration).apiLiveMineGet(status, page, pageSize, options).then((request) => request(this.axios, this.basePath));
     }
     /**
