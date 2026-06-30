@@ -248,7 +248,10 @@ onMounted(async () => {
 
 const loadLives = async () => {
   try {
-    lives.value = await liveApi.getLives()
+    lives.value = await liveApi.getAdminLives({
+      status: filters.status || undefined,
+      search: filters.volunteer || undefined,
+    })
   } catch (error: any) {
     ElMessage.error(error.message || '加载直播列表失败')
   }
@@ -282,12 +285,13 @@ const formatDate = (dateStr: string) => {
 }
 
 const handleSearch = () => {
-  // 搜索逻辑已在computed中实现
+  void loadLives()
 }
 
 const handleReset = () => {
   filters.status = ''
   filters.volunteer = ''
+  void loadLives()
 }
 
 const checkSelectable = (row: Live) => {

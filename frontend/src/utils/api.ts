@@ -100,7 +100,7 @@ const adaptLive = (l: ApiLiveRoom): Live => {
     estimatedViewers: 0,
     status: statusMap[l.status] || 'draft',
     volunteerId: l.anchorId,
-    volunteerName: (l.anchor as any)?.name || '',
+    volunteerName: (l.anchor as any)?.realName || (l.anchor as any)?.name || '',
     collegeId: l.collegeId,
     collegeName: (l.college as any)?.name || '',
     peakViewers: 0,
@@ -303,6 +303,39 @@ export const liveApi = {
   // 志愿者自己的直播列表
   getMyLives: async (): Promise<Live[]> => {
     const req = await LiveApiFp(apiConfig).apiLiveMineGet()
+    const res = await req()
+    const payload: any = res?.data?.data ?? res?.data
+    const list: any[] = Array.isArray(payload?.items) ? payload.items : []
+    return list.map((l: any) => adaptLive(l as ApiLiveRoom))
+  },
+
+  // 管理端直播列表（学院/平台管理员；默认 status=REVIEW）
+  getAdminLives: async (params?: {
+    status?: string
+    search?: string
+    collegeId?: number
+    page?: number
+    pageSize?: number
+  }): Promise<Live[]> => {
+    const statusMap: Record<string, LiveRoomStatusEnum | string> = {
+      reviewing: 'REVIEW',
+      approved: 'PASSED',
+      rejected: 'REJECTED',
+      published: 'PUBLISHED',
+      live: 'LIVING',
+      ended: 'FINISHED',
+      offline: 'OFFLINE',
+      draft: 'DRAFT',
+    }
+    const backendStatus = params?.status ? statusMap[params.status] : undefined
+    const req = await LiveApiFp(apiConfig).apiLiveAdminGet(
+      backendStatus as any,
+      params?.collegeId,
+      undefined,
+      params?.search,
+      params?.page,
+      params?.pageSize
+    )
     const res = await req()
     const payload: any = res?.data?.data ?? res?.data
     const list: any[] = Array.isArray(payload?.items) ? payload.items : []
@@ -827,8 +860,8 @@ export const reviewApi = {
   // 审核直播
   reviewLive: async (id: number, action: 'approve' | 'reject', reason?: string): Promise<void> => {
     const req = await LiveApiFp(apiConfig).apiLiveIdAuditPost(String(id), {
-      status: action === 'approve' ? 'PASSED' : 'REJECTED',
-      rejectReason: action === 'reject' ? (reason || '') : undefined
+      pass: action === 'approve',
+      reason: action === 'reject' ? (reason || '') : undefined
     } as any)
     await req()
   }
