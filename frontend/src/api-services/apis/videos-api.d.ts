@@ -92,6 +92,14 @@ export declare const VideosApiAxiosParamCreator: (configuration?: Configuration)
      */
     apiVideosCommentsCommentIdAuditPost: (commentId: string, body?: CommentIdAuditBody, options?: AxiosRequestConfig) => Promise<RequestArgs>;
     /**
+     *
+     * @summary 删除评论（管理员、视频上传者或评论作者）
+     * @param {string} commentId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    apiVideosCommentsCommentIdDelete: (commentId: string, options?: AxiosRequestConfig) => Promise<RequestArgs>;
+    /**
      * 游客/儿童仅可获取已发布(PUBLISHED)内容；search 或请求非 PUBLISHED 时需登录。
      * @summary 获取视频列表（公开）
      * @param {string} [status]
@@ -335,6 +343,14 @@ export declare const VideosApiFp: (configuration?: Configuration) => {
      */
     apiVideosCommentsCommentIdAuditPost(commentId: string, body?: CommentIdAuditBody, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse2013>>>;
     /**
+     *
+     * @summary 删除评论（管理员、视频上传者或评论作者）
+     * @param {string} commentId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    apiVideosCommentsCommentIdDelete(commentId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<InlineResponse201>>>;
+    /**
      * 游客/儿童仅可获取已发布(PUBLISHED)内容；search 或请求非 PUBLISHED 时需登录。
      * @summary 获取视频列表（公开）
      * @param {string} [status]
@@ -577,6 +593,14 @@ export declare const VideosApiFactory: (configuration?: Configuration, basePath?
      * @throws {RequiredError}
      */
     apiVideosCommentsCommentIdAuditPost(commentId: string, body?: CommentIdAuditBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2013>>;
+    /**
+     *
+     * @summary 删除评论（管理员、视频上传者或评论作者）
+     * @param {string} commentId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    apiVideosCommentsCommentIdDelete(commentId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>>;
     /**
      * 游客/儿童仅可获取已发布(PUBLISHED)内容；search 或请求非 PUBLISHED 时需登录。
      * @summary 获取视频列表（公开）
@@ -827,6 +851,15 @@ export declare class VideosApi extends BaseAPI {
      * @memberof VideosApi
      */
     apiVideosCommentsCommentIdAuditPost(commentId: string, body?: CommentIdAuditBody, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse2013>>;
+    /**
+     *
+     * @summary 删除评论（管理员、视频上传者或评论作者）
+     * @param {string} commentId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VideosApi
+     */
+    apiVideosCommentsCommentIdDelete(commentId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<InlineResponse201>>;
     /**
      * 游客/儿童仅可获取已发布(PUBLISHED)内容；search 或请求非 PUBLISHED 时需登录。
      * @summary 获取视频列表（公开）

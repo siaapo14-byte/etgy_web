@@ -300,6 +300,48 @@ export const VideosApiAxiosParamCreator = function (configuration) {
             };
         },
         /**
+         *
+         * @summary 删除评论（管理员、视频上传者或评论作者）
+         * @param {string} commentId
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiVideosCommentsCommentIdDelete: async (commentId, options = {}) => {
+            if (commentId === null || commentId === undefined) {
+                throw new RequiredError('commentId', 'Required parameter commentId was null or undefined when calling apiVideosCommentsCommentIdDelete.');
+            }
+            const localVarPath = `/api/videos/comments/{commentId}`
+                .replace(`{${"commentId"}}`, encodeURIComponent(String(commentId)));
+            const localVarUrlObj = new URL(localVarPath, 'https://example.com');
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options };
+            const localVarHeaderParameter = {};
+            const localVarQueryParameter = {};
+            if (configuration && configuration.accessToken) {
+                const accessToken = typeof configuration.accessToken === 'function'
+                    ? await configuration.accessToken()
+                    : await configuration.accessToken;
+                localVarHeaderParameter["Authorization"] = "Bearer " + accessToken;
+            }
+            const query = new URLSearchParams(localVarUrlObj.search);
+            for (const key in localVarQueryParameter) {
+                query.set(key, localVarQueryParameter[key]);
+            }
+            for (const key in options.params) {
+                query.set(key, options.params[key]);
+            }
+            localVarUrlObj.search = (new URLSearchParams(query)).toString();
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers };
+            return {
+                url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 游客/儿童仅可获取已发布(PUBLISHED)内容；search 或请求非 PUBLISHED 时需登录。
          * @summary 获取视频列表（公开）
          * @param {string} [status]
@@ -1362,6 +1404,20 @@ export const VideosApiFp = function (configuration) {
             };
         },
         /**
+         *
+         * @summary 删除评论（管理员、视频上传者或评论作者）
+         * @param {string} commentId
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosCommentsCommentIdDelete(commentId, options) {
+            const localVarAxiosArgs = await VideosApiAxiosParamCreator(configuration).apiVideosCommentsCommentIdDelete(commentId, options);
+            return (axios = globalAxios, basePath = BASE_PATH) => {
+                const axiosRequestArgs = { ...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url };
+                return axios.request(axiosRequestArgs);
+            };
+        },
+        /**
          * 游客/儿童仅可获取已发布(PUBLISHED)内容；search 或请求非 PUBLISHED 时需登录。
          * @summary 获取视频列表（公开）
          * @param {string} [status]
@@ -1737,6 +1793,16 @@ export const VideosApiFactory = function (configuration, basePath, axios) {
             return VideosApiFp(configuration).apiVideosCommentsCommentIdAuditPost(commentId, body, options).then((request) => request(axios, basePath));
         },
         /**
+         *
+         * @summary 删除评论（管理员、视频上传者或评论作者）
+         * @param {string} commentId
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiVideosCommentsCommentIdDelete(commentId, options) {
+            return VideosApiFp(configuration).apiVideosCommentsCommentIdDelete(commentId, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 游客/儿童仅可获取已发布(PUBLISHED)内容；search 或请求非 PUBLISHED 时需登录。
          * @summary 获取视频列表（公开）
          * @param {string} [status]
@@ -2036,6 +2102,17 @@ export class VideosApi extends BaseAPI {
      */
     async apiVideosCommentsCommentIdAuditPost(commentId, body, options) {
         return VideosApiFp(this.configuration).apiVideosCommentsCommentIdAuditPost(commentId, body, options).then((request) => request(this.axios, this.basePath));
+    }
+    /**
+     *
+     * @summary 删除评论（管理员、视频上传者或评论作者）
+     * @param {string} commentId
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof VideosApi
+     */
+    async apiVideosCommentsCommentIdDelete(commentId, options) {
+        return VideosApiFp(this.configuration).apiVideosCommentsCommentIdDelete(commentId, options).then((request) => request(this.axios, this.basePath));
     }
     /**
      * 游客/儿童仅可获取已发布(PUBLISHED)内容；search 或请求非 PUBLISHED 时需登录。
