@@ -20,6 +20,19 @@ export type BroadcastLoadingStep =
   | 'join'
   | 'publish'
 
+export type NetworkQualityLevel = 'good' | 'fair' | 'poor' | 'down'
+export type BroadcasterConnectionState = 'connected' | 'reconnecting' | 'disconnected'
+
+export const LIVE_WEAK_NETWORK_POLICY = {
+  reconnectMaxAttempts: 5,
+  lowStream: {
+    width: 320,
+    height: 180,
+    framerate: 15,
+    bitrate: 200,
+  },
+} as const
+
 type VideoPreviewOptions = {
   fit?: 'cover' | 'contain'
   mirror?: boolean
@@ -40,6 +53,9 @@ export function useAgoraBroadcaster() {
   const isScreenSharing = ref(false)
   const shareSystemAudioEnabled = ref(false)
   const isSystemAudioActive = ref(false)
+  const networkQuality = ref<NetworkQualityLevel>('good')
+  const connectionState = ref<BroadcasterConnectionState>('disconnected')
+  const reconnectAttempts = ref(0)
 
   let client: IAgoraRTCClient | null = null
   let localAudioTrack: IMicrophoneAudioTrack | null = null
@@ -145,7 +161,7 @@ export function useAgoraBroadcaster() {
             width: 1280,
             height: 720,
             frameRate: 30,
-            bitrateMin: 1000,
+            bitrateMin: 400,
             bitrateMax: 2500,
           },
           optimizationMode: 'motion',
@@ -165,9 +181,43 @@ export function useAgoraBroadcaster() {
 
     client = AgoraRTC.createClient({ mode: 'live', codec: 'h264' })
     await client.setClientRole('host')
+    connectionState.value = 'reconnecting'
+
+    client.on('network-quality', (stats) => {
+      const uplink = stats.uplinkNetworkQuality ?? 0
+      if (uplink <= 2) {
+        networkQuality.value = 'good'
+      } else if (uplink <= 4) {
+        networkQuality.value = 'fair'
+      } else if (uplink <= 6) {
+        networkQuality.value = 'poor'
+      } else {
+        networkQuality.value = 'down'
+      }
+    })
+
+    client.on('connection-state-change', (curState) => {
+      if (curState === 'CONNECTED') {
+        connectionState.value = 'connected'
+        reconnectAttempts.value = 0
+        return
+      }
+      if (curState === 'RECONNECTING' || curState === 'CONNECTING') {
+        connectionState.value = 'reconnecting'
+        reconnectAttempts.value = Math.min(
+          reconnectAttempts.value + 1,
+          LIVE_WEAK_NETWORK_POLICY.reconnectMaxAttempts
+        )
+        return
+      }
+      connectionState.value = 'disconnected'
+    })
 
     onStep?.('join')
     await client.join(cred.appId, cred.channelName, cred.token, cred.uid)
+
+    await client.enableDualStream()
+    await client.setLowStreamParameter(LIVE_WEAK_NETWORK_POLICY.lowStream)
 
     onStep?.('publish')
     await client.publish(tracks)
@@ -304,6 +354,9 @@ export function useAgoraBroadcaster() {
       await client.leave()
       client = null
     }
+    connectionState.value = 'disconnected'
+    networkQuality.value = 'good'
+    reconnectAttempts.value = 0
   }
 
   async function setMicEnabled(enabled: boolean) {
@@ -319,6 +372,10 @@ export function useAgoraBroadcaster() {
     isScreenSharing,
     shareSystemAudioEnabled,
     isSystemAudioActive,
+    networkQuality,
+    connectionState,
+    reconnectAttempts,
+    reconnectMaxAttempts: LIVE_WEAK_NETWORK_POLICY.reconnectMaxAttempts,
     joinAsHost,
     leave,
     setMicEnabled,

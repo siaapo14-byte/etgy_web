@@ -25,6 +25,9 @@
           </div>
           <span class="live-room__status">{{ statusText }}</span>
         </div>
+        <div v-if="networkHint" class="live-room__network-hint" :class="networkHintClass">
+          {{ networkHint }}
+        </div>
 
         <div class="live-room__bottom">
           <el-button
@@ -146,6 +149,10 @@ const {
   isScreenSharing,
   shareSystemAudioEnabled,
   isSystemAudioActive,
+  networkQuality,
+  connectionState,
+  reconnectAttempts,
+  reconnectMaxAttempts,
   joinAsHost,
   leave,
   setMicEnabled,
@@ -155,10 +162,35 @@ const {
 } = useAgoraBroadcaster()
 
 const statusText = computed(() => {
+  if (connectionState.value === 'reconnecting') return '重连中'
+  if (connectionState.value === 'disconnected' && isPublishing.value) return '连接已断开'
   if (isScreenSharing.value && isSystemAudioActive.value) return '屏幕共享中 · 含系统音频'
   if (isScreenSharing.value) return '屏幕共享中'
   if (shareSystemAudioEnabled.value && !isScreenSharing.value) return '推流中 · 下次共享将采集系统音频'
   return isPublishing.value ? '推流中' : '正在连接…'
+})
+
+const networkHint = computed(() => {
+  if (!isPublishing.value) return ''
+  if (connectionState.value === 'reconnecting') {
+    const count = Math.min(reconnectAttempts.value, reconnectMaxAttempts)
+    return `网络波动，正在自动重连（${count}/${reconnectMaxAttempts}）…`
+  }
+  if (connectionState.value === 'disconnected') return '连接中断，请检查网络后重试'
+  if (networkQuality.value === 'poor' || networkQuality.value === 'down') {
+    return '当前网络较差，已自动降低码率并启用音频优先保护'
+  }
+  if (networkQuality.value === 'fair') return '当前网络一般，画质可能临时下降'
+  return ''
+})
+
+const networkHintClass = computed(() => {
+  if (connectionState.value === 'reconnecting') return 'live-room__network-hint--warn'
+  if (connectionState.value === 'disconnected') return 'live-room__network-hint--danger'
+  if (networkQuality.value === 'poor' || networkQuality.value === 'down') {
+    return 'live-room__network-hint--warn'
+  }
+  return 'live-room__network-hint--info'
 })
 
 const systemAudioButtonTitle = computed(() => {
@@ -464,6 +496,7 @@ onUnmounted(() => {
   }
 
   &__top,
+  &__network-hint,
   &__bottom {
     pointer-events: auto;
   }
@@ -516,6 +549,29 @@ onUnmounted(() => {
     flex-wrap: wrap;
     gap: 12px;
     padding: 16px 20px 20px;
+  }
+
+  &__network-hint {
+    margin: 0 20px;
+    align-self: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.3;
+    color: #fff;
+    background: rgba(64, 158, 255, 0.78);
+  }
+
+  &__network-hint--info {
+    background: rgba(64, 158, 255, 0.78);
+  }
+
+  &__network-hint--warn {
+    background: rgba(230, 162, 60, 0.86);
+  }
+
+  &__network-hint--danger {
+    background: rgba(245, 108, 108, 0.86);
   }
 
   &__alert {
