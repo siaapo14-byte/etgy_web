@@ -5,7 +5,7 @@
     width="1100px"
     class="video-preview-dialog"
     @update:model-value="emit('update:modelValue', $event)"
-    @closed="active = 'info'"
+    @closed="handleClosed"
   >
     <div v-if="video" class="vpd">
       <aside class="vpd__side">
@@ -36,6 +36,15 @@
           >
             <el-icon class="vpd__navIcon"><InfoFilled /></el-icon>
             <span>信息</span>
+          </button>
+          <button
+            class="vpd__navItem"
+            :class="{ 'is-active': active === 'comments' }"
+            type="button"
+            @click="active = 'comments'"
+          >
+            <el-icon class="vpd__navIcon"><ChatDotRound /></el-icon>
+            <span>视频评论</span>
           </button>
         </div>
       </aside>
@@ -87,7 +96,7 @@
         </section>
 
         <!-- Info -->
-        <section v-else class="vpd__panel vpd__panel--scroll">
+        <section v-else-if="active === 'info'" class="vpd__panel vpd__panel--scroll">
           <div class="vpd__fieldGrid">
             <div class="vpd__field">
               <div class="vpd__label">标题</div>
@@ -151,6 +160,60 @@
             </div>
           </div>
         </section>
+
+        <!-- Comments -->
+        <section v-else class="vpd__panel vpd__panel--scroll">
+          <div class="vpd__commentsHeader">
+            <div>
+              <div class="vpd__commentsTitle">视频评论</div>
+              <div v-if="comments.length" class="vpd__commentsHint">可在右侧操作列删除评论</div>
+            </div>
+            <el-button size="small" :loading="commentsLoading" @click="loadComments(true)">刷新</el-button>
+          </div>
+
+          <div class="vpd__commentsTableWrap">
+            <el-table
+              v-loading="commentsLoading"
+              :data="comments"
+              size="small"
+              style="width: 100%"
+              empty-text="暂无评论"
+            >
+              <el-table-column prop="content" label="评论内容" min-width="200">
+                <template #default="{ row }">
+                  <div class="vpd__commentContent">{{ row.content }}</div>
+                  <div v-if="row.rejectReason" class="vpd__commentReject">驳回：{{ row.rejectReason }}</div>
+                </template>
+              </el-table-column>
+              <el-table-column prop="authorName" label="发布者" width="100" />
+              <el-table-column prop="status" label="状态" width="88">
+                <template #default="{ row }">
+                  <el-tag :type="commentStatusType(row.status)" size="small">{{ commentStatusText(row.status) }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="createdAt" label="时间" width="150">
+                <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+              </el-table-column>
+              <el-table-column label="操作" width="100" align="center">
+                <template #default="{ row }">
+                  <el-button
+                    type="danger"
+                    size="small"
+                    plain
+                    :loading="deletingCommentId === row.id"
+                    @click.stop="handleDeleteComment(row)"
+                  >
+                    删除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <div v-if="commentsTotal > comments.length" class="vpd__commentsMore">
+            共 {{ commentsTotal }} 条，当前展示 {{ comments.length }} 条
+          </div>
+        </section>
       </main>
     </div>
 
@@ -162,9 +225,11 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Picture, VideoPlay, InfoFilled } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Picture, VideoPlay, InfoFilled, ChatDotRound } from '@element-plus/icons-vue'
 import { VideosApiFp } from '@/api-services/apis/videos-api'
 import { apiConfig } from '@/apiClient'
+import { commentApi, getApiErrorMessage } from '@/utils/api'
 
 const props = defineProps<{
   modelValue: boolean
@@ -180,7 +245,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
 }>()
 
-const active = ref<'cover' | 'video' | 'info'>('info')
+const active = ref<'cover' | 'video' | 'info' | 'comments'>('info')
 const videoEl = ref<HTMLVideoElement | null>(null)
 const videoError = ref('')
 const videoSrc = ref('')
@@ -188,6 +253,12 @@ const coverSrc = ref('')
 const mediaLoading = ref(false)
 const mediaLoadError = ref('')
 const lastVideoId = ref<number | null>(null)
+
+const comments = ref<any[]>([])
+const commentsTotal = ref(0)
+const commentsLoading = ref(false)
+const commentsLoadedForId = ref<number | null>(null)
+const deletingCommentId = ref<number | null>(null)
 
 const pickMediaUrl = (data: any, keys: string[]): string => {
   for (const k of keys) {
@@ -239,14 +310,68 @@ watch(
       videoSrc.value = ''
       coverSrc.value = ''
       lastVideoId.value = null
+      comments.value = []
+      commentsTotal.value = 0
+      commentsLoadedForId.value = null
     }
 
     if (tab === 'video' || tab === 'cover') {
       // 只有访问媒体 tab 时才请求
       void loadMediaUrls(id)
     }
+
+    if (tab === 'comments') {
+      void loadComments()
+    }
   }
 )
+
+const loadComments = async (force = false) => {
+  const id = Number(props.video?.id)
+  if (!Number.isFinite(id) || id <= 0) return
+  if (!force && commentsLoadedForId.value === id && comments.value.length > 0) return
+
+  commentsLoading.value = true
+  try {
+    const result = await commentApi.getVideoComments(id, { page: 1, pageSize: 50 })
+    comments.value = result.items
+    commentsTotal.value = result.total
+    commentsLoadedForId.value = id
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载评论失败')
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
+const handleDeleteComment = async (row: any) => {
+  const commentId = Number(row?.id)
+  if (!Number.isFinite(commentId) || commentId <= 0) {
+    ElMessage.error('评论 ID 无效')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm('确定删除这条评论吗？删除后不可恢复。', '删除评论', { type: 'warning' })
+    deletingCommentId.value = commentId
+    await commentApi.deleteComment(commentId)
+    ElMessage.success('删除成功')
+    comments.value = comments.value.filter((c) => Number(c.id) !== commentId)
+    commentsTotal.value = Math.max(0, commentsTotal.value - 1)
+  } catch (e: any) {
+    if (e === 'cancel') return
+    ElMessage.error(getApiErrorMessage(e, '删除失败'))
+  } finally {
+    deletingCommentId.value = null
+  }
+}
+
+const handleClosed = () => {
+  active.value = 'info'
+  comments.value = []
+  commentsTotal.value = 0
+  commentsLoadedForId.value = null
+}
 
 const resetVideoError = () => {
   videoError.value = ''
@@ -311,6 +436,24 @@ const formatDate = (dateStr?: string) => {
   } catch {
     return String(dateStr)
   }
+}
+
+const commentStatusType = (status: string) => {
+  const map: Record<string, any> = {
+    PENDING: 'warning',
+    APPROVED: 'success',
+    REJECTED: 'danger'
+  }
+  return map[String(status || '').toUpperCase()] || 'info'
+}
+
+const commentStatusText = (status: string) => {
+  const map: Record<string, string> = {
+    PENDING: '待审核',
+    APPROVED: '已通过',
+    REJECTED: '已驳回'
+  }
+  return map[String(status || '').toUpperCase()] || status || '-'
 }
 </script>
 
@@ -387,7 +530,7 @@ const formatDate = (dateStr?: string) => {
   border: 1px solid var(--vpd-border);
   background: rgba(255, 255, 255, 0.85);
   border-radius: var(--vpd-radius);
-  overflow: hidden;
+  overflow: auto;
 }
 
 .vpd__panel {
@@ -516,6 +659,48 @@ const formatDate = (dateStr?: string) => {
 .vpd__statusTag {
   border-radius: 999px;
   padding: 2px 10px;
+}
+
+.vpd__commentsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.vpd__commentsTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.vpd__commentsHint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--vpd-muted);
+}
+
+.vpd__commentContent {
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.vpd__commentReject {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #f56c6c;
+}
+
+.vpd__commentsMore {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--vpd-muted);
+  text-align: right;
+}
+
+.vpd__commentsTableWrap {
+  width: 100%;
+  overflow-x: auto;
 }
 </style>
 

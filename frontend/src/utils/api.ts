@@ -949,6 +949,62 @@ export const commentApi = {
       reason: action === 'reject' ? (reason || '') : undefined
     } as any)
     await req()
+  },
+
+  // 获取某视频下的评论列表
+  getVideoComments: async (
+    videoId: number,
+    params?: { page?: number; pageSize?: number }
+  ): Promise<{ items: any[]; total: number }> => {
+    const page = Number(params?.page ?? 1)
+    const pageSize = Number(params?.pageSize ?? 50)
+    const req = await VideosApiFp(apiConfig).apiVideosIdCommentsGet(String(videoId), page, pageSize)
+    const res = await req()
+    const raw: any = res.data?.data ?? res.data
+    const items: any[] = Array.isArray(raw) ? raw : []
+    const total = Number(res.headers?.['x-total-count'] ?? items.length)
+
+    return {
+      items: items.map((c: any) => ({
+        id: c.id,
+        videoId: c.videoId,
+        content: c.content ?? '',
+        status: String(c.status ?? 'PENDING').toUpperCase(),
+        authorId: c.authorId,
+        authorName:
+          c.author?.childProfile?.nickname ??
+          c.author?.username ??
+          c.author?.name ??
+          c.author?.realName ??
+          (c.authorId ? `用户${c.authorId}` : '匿名'),
+        authorRole: c.author?.role ?? '',
+        rejectReason: c.rejectReason ?? '',
+        createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()
+      })),
+      total
+    }
+  },
+
+  // 删除评论
+  deleteComment: async (commentId: number): Promise<void> => {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || ''
+    const response = await fetch(`${window.location.origin}/api/videos/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
+
+    if (!response.ok) {
+      let message = '删除失败'
+      try {
+        const body = await response.json()
+        message = body?.message || message
+      } catch {
+        // Ignore non-JSON error bodies.
+      }
+      throw new Error(message)
+    }
   }
 }
 
