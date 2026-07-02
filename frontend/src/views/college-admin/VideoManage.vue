@@ -46,7 +46,7 @@
             class="thumb-cover"
           />
           <div class="video-overlay">
-            <div class="dots-menu" @click.stop="openMenu(video)">
+            <div class="dots-menu" @click.stop="handlePreview(video)">
               <span></span><span></span><span></span>
             </div>
           </div>
@@ -62,13 +62,6 @@
       </div>
       <div v-if="loadingMore" class="loading-more">加载中...</div>
     </div>
-    <el-dropdown v-if="menuVisible" :visible="menuVisible" @visible-change="menuVisible = $event" :teleported="false" :style="{ position: 'fixed', left: menuX + 'px', top: menuY + 'px', zIndex: 9999 }">
-      <el-dropdown-menu>
-        <el-dropdown-item @click="handlePublish(menuVideo)">发布</el-dropdown-item>
-        <el-dropdown-item @click="handleOffline(menuVideo)">下线</el-dropdown-item>
-        <el-dropdown-item @click="handlePreview(menuVideo)">预览</el-dropdown-item>
-      </el-dropdown-menu>
-    </el-dropdown>
     
     <!-- 下线对话框 -->
     <el-dialog
@@ -98,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { videoApi } from '@/utils/api'
 import type { Video } from '@/utils/mockData'
@@ -111,10 +104,6 @@ import { useUserStore } from '@/stores/user'
 // 状态定义
 const videos = ref<Video[]>([]) // 存储所有视频（或当前页视频）
 const loadingMore = ref(false)
-const menuVisible = ref(false)
-const menuVideo = ref<any>(null)
-const menuX = ref(0)
-const menuY = ref(0)
 const videoRefs = reactive<Record<number, HTMLVideoElement | null>>({})
 const hoverTimers = reactive<Record<number, any>>({})
 const playingIdMap = reactive<Record<number, boolean>>({})
@@ -272,20 +261,6 @@ function stopHover(id: number) {
   }
   playingIdMap[id] = false
   if (currentPlayingId.value === id) currentPlayingId.value = null
-}
-
-// 菜单逻辑
-function openMenu(video: any) {
-  menuVideo.value = video
-  menuVisible.value = true
-  nextTick(() => {
-    // 定位到鼠标位置
-    const event = window.event as MouseEvent
-    if (event) {
-      menuX.value = event.clientX
-      menuY.value = event.clientY
-    }
-  })
 }
 
 // 工具函数
